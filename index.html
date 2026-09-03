@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Perfectube</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ff0033'/%3E%3Cpath d='M26 19l23 13-23 13z' fill='white'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="toast"></div>
+
+  <header class="topbar">
+    <button class="brand" id="homeBtn"><span class="brandIcon">▶</span><span>Perfectube</span></button>
+    <div class="searchWrap">
+      <input id="search" placeholder="Search Perfectube..." autocomplete="off">
+      <button id="searchBtn">⌕</button>
+    </div>
+    <div class="accountArea">
+      <button id="loginOpen" class="ghostBtn">Log in</button>
+      <button id="signupOpen" class="primaryBtn">Sign up</button>
+      <div id="account" class="account hidden">
+        <img id="accountAvatar" alt="">
+        <span id="accountName"></span>
+        <button id="logoutBtn" class="ghostBtn">Log out</button>
+      </div>
+    </div>
+  </header>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <button class="side active" data-page="home">⌂ <span>Home</span></button>
+      <button class="side" data-page="shorts">▣ <span>Shorts</span></button>
+      <button class="side" data-page="channels">◉ <span>Channels</span></button>
+      <div class="sideTitle">FILTERS</div>
+      <button class="side filter active" data-type="All">All videos</button>
+      <button class="side filter" data-type="Comedy & Clips">Comedy & Clips</button>
+      <button class="side filter" data-type="Animals">Animals</button>
+      <button class="side filter" data-type="Gaming">Gaming</button>
+      <button class="side filter" data-type="Clips">Clips</button>
+      <div class="sideTitle">YOUR SPACE</div>
+      <button class="side" id="emojiOpen">☺ My emojis</button>
+    </aside>
+
+    <main class="main">
+      <section id="hero" class="hero">
+        <div>
+          <p class="eyebrow">YOUR PERSONAL VIDEO HUB</p>
+          <h1>Welcome to <span>Perfectube</span>.</h1>
+          <p>One clean feed for the channels you picked, with your own accounts, reactions, comments and custom emojis.</p>
+        </div>
+        <button class="primaryBtn big" id="heroSignup">Create your account</button>
+      </section>
+
+      <div class="sectionHead">
+        <div>
+          <h2 id="feedTitle">Latest videos</h2>
+          <p id="feedSub">Fresh uploads from your selected channels.</p>
+        </div>
+        <button id="refreshBtn" class="ghostBtn">↻ Refresh</button>
+      </div>
+
+      <div id="loading" class="loading">Loading videos...</div>
+      <div id="videoGrid" class="videoGrid"></div>
+      <div id="empty" class="empty hidden">No videos match that filter.</div>
+
+      <section id="channelsPanel" class="channelsPanel hidden">
+        <div class="sectionHead"><div><h2>Your channels</h2><p>The channels currently included in Perfectube.</p></div></div>
+        <div id="channelGrid" class="channelGrid"></div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Auth modal -->
+  <div id="authModal" class="modal hidden">
+    <div class="modalCard authCard">
+      <button class="close" data-close="authModal">×</button>
+      <div class="authLogo">▶</div>
+      <h2 id="authTitle">Create your Perfectube account</h2>
+      <p id="authSubtitle">Pick a name, password and profile picture.</p>
+
+      <div class="authTabs">
+        <button id="tabLogin">Log in</button>
+        <button id="tabSignup" class="selected">Sign up</button>
+      </div>
+
+      <form id="authForm">
+        <label>Name<input id="username" required maxlength="24" autocomplete="username" placeholder="YourName"></label>
+        <label>Password<input id="password" required minlength="6" type="password" autocomplete="new-password" placeholder="At least 6 characters"></label>
+        <label id="avatarLabel">Profile picture<input id="avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>
+        <button class="primaryBtn full" type="submit" id="authSubmit">Sign up</button>
+      </form>
+      <p class="smallNote">No email is required for this Perfectube account system.</p>
+    </div>
+  </div>
+
+  <!-- Video modal -->
+  <div id="videoModal" class="modal hidden">
+    <div class="modalCard videoCard">
+      <button class="close" data-close="videoModal">×</button>
+      <div class="player"><iframe id="player" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+      <div class="videoInfo">
+        <h2 id="videoTitle"></h2>
+        <p id="videoChannel"></p>
+        <div class="reactionRow">
+          <button id="likeBtn">👍 <span id="likeCount">0</span></button>
+          <button id="dislikeBtn">👎 <span id="dislikeCount">0</span></button>
+          <a id="youtubeBtn" target="_blank" rel="noopener">Open on YouTube ↗</a>
+        </div>
+      </div>
+      <div class="comments">
+        <div class="commentHead"><h3>Comments</h3><span id="commentCount">0</span></div>
+        <form id="commentForm">
+          <input id="commentText" maxlength="500" placeholder="Write a comment...">
+          <button class="primaryBtn" type="submit">Post</button>
+        </form>
+        <div id="commentList"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Emoji modal -->
+  <div id="emojiModal" class="modal hidden">
+    <div class="modalCard emojiCard">
+      <button class="close" data-close="emojiModal">×</button>
+      <h2>Perfectube emojis</h2>
+      <p>These are Perfectube's built-in custom reaction emojis.</p>
+      <div id="emojiGrid" class="emojiGrid"></div>
+      <div class="emojiHint">Click an emoji to copy it.</div>
+    </div>
+  </div>
+
+  <script src="/app.js"></script>
+</body>
+</html>
