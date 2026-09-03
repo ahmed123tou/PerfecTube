@@ -1,7 +1,7 @@
 require("dotenv").config();
 
-const path = require("path");
 const express = require("express");
+const path = require("path");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
 const multer = require("multer");
@@ -10,194 +10,169 @@ const { MongoClient, ObjectId } = require("mongodb");
 const app = express();
 
 const PORT = process.env.PORT || 3000;
-const JWT_SECRET = process.env.JWT_SECRET || "change-me";
-const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY || "";
-const MONGODB_URI = process.env.MONGODB_URI || "";
+const JWT_SECRET = process.env.JWT_SECRET || "change-this-secret";
+const MONGODB_URI = process.env.MONGODB_URI;
+const YOUTUBE_API_KEY = process.env.YOUTUBE_API_KEY;
 
-app.use(express.json({ limit: "3mb" }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: "5mb" }));
+app.use(express.urlencoded({ extended: true, limit: "5mb" }));
+
 app.use(express.static(path.join(__dirname, "public")));
 
 const upload = multer({
   storage: multer.memoryStorage(),
   limits: {
-    fileSize: 1024 * 1024
+    fileSize: 2 * 1024 * 1024
   }
 });
 
+/* =========================================================
+   CHANNELS
+========================================================= */
+
 const CHANNELS = [
   {
-    id: "UC_MIKE_OFF_RECORD",
-    handle: "@MikeOffRecord",
-    name: "Mike Off Record",
-    type: "Comedy & Clips"
+    id: "UCX6OQ3DkcsbYNE6H8uQQuVA",
+    name: "MrBeast",
+    avatar: "https://yt3.googleusercontent.com/ytc/AIdro_lY7"
   },
   {
-    id: "UC_ANAHEIMM",
-    handle: "@Anaheimm",
-    name: "Anaheimm",
-    type: "Comedy & Clips"
+    id: "UCq-Fj5jknLsUf-MWSy4_brA",
+    name: "T-Series"
   },
   {
-    id: "UC_WAGS_WALKS",
-    handle: "@Wags_and_Walks_Pup_Up",
-    name: "Wags & Walks Pup Up",
-    type: "Animals"
+    id: "UC-lHJZR3Gqxm24_Vd_AJ5Yw",
+    name: "PewDiePie"
   },
   {
-    id: "UC_ITS_BASEPLATE",
-    handle: "@ItsBaseplate",
-    name: "ItsBaseplate",
-    type: "Gaming"
+    id: "UCcabW7890RKJzL968QWEykA",
+    name: "Mark Rober"
   },
   {
-    id: "UC_FAJARE_SOKHARI",
-    handle: "@Fajaresokhari",
-    name: "Fajaresokhari",
-    type: "Clips"
+    id: "UCVHFbqXqoYvEWM1Ddxl0QDg",
+    name: "Veritasium"
   },
   {
-    id: "UC_CLIPSDONUT",
-    handle: "@clipsdonut",
-    name: "clipsdonut",
-    type: "Clips"
+    id: "UCsXVk37bltHxD1rDPwtNM8Q",
+    name: "Kurzgesagt"
   },
   {
-    id: "UC_MR_STAN01",
-    handle: "@Mr.Stan01",
-    name: "Mr. Stan",
-    type: "Clips"
+    id: "UCYO_jab_esuFRV4b17AJtAw",
+    name: "3Blue1Brown"
   },
   {
-    id: "UC_UNCDAVIN",
-    handle: "@UncDavin",
-    name: "Unc Davin",
-    type: "Comedy & Clips"
+    id: "UC8butISFwT-Wl7EV0hUK0BQ",
+    name: "freeCodeCamp"
   },
   {
-    id: "UC_LAVABLOX01",
-    handle: "@LavaBlox01",
-    name: "LavaBlox01",
-    type: "Gaming"
+    id: "UC4a-Gbdw7vOaccHmFo40b9g",
+    name: "The Infographics Show"
   },
   {
-    id: "UC_BLOBBYCLIPS",
-    handle: "@BlobbyClips",
-    name: "BlobbyClips",
-    type: "Clips"
+    id: "UCsT0YIqwnpJCM-mx7-gSA4Q",
+    name: "TED"
   },
   {
-    id: "UC_PYLAROXD",
-    handle: "@pylaroXD",
-    name: "pylaroXD",
-    type: "Gaming"
+    id: "UCbRP3c757lWg9M-U7TyEkXA",
+    name: "Cocomelon"
   },
   {
-    id: "UC_COPYMASTER11",
-    handle: "@CopyMaster11",
-    name: "CopyMaster11",
-    type: "Clips"
+    id: "UCpEhnqL0y41EpW2TvWAHD7Q",
+    name: "Alan Chikin Chow"
   },
   {
-    id: "UC_RENOVATEDPOTATO",
-    handle: "@RenovatedPotato",
-    name: "RenovatedPotato",
-    type: "Comedy & Clips"
+    id: "UCYzPXprvl5Y-Sf0g4vX-m6g",
+    name: "Dude Perfect"
   },
   {
-    id: "UC_ONLYMISALIGNED",
-    handle: "@onlyMisaligned",
-    name: "onlyMisaligned",
-    type: "Clips"
+    id: "UCqECaJ8Gagnn7YCbPEzWH6g",
+    name: "Ariana Grande"
   },
   {
-    id: "UC_RIPPEDROBBY",
-    handle: "@RippedRobby",
-    name: "RippedRobby",
-    type: "Comedy & Clips"
-  },
-  {
-    id: "UC_PIXIESGARDEN",
-    handle: "@PixiesGardenReal",
-    name: "PixiesGardenReal",
-    type: "Animals"
+    id: "UCvC4D8onUfXzvjTOM-dBfEA",
+    name: "Marques Brownlee"
   }
 ];
 
-const resolvedChannels = new Map();
+/* =========================================================
+   MONGODB
+========================================================= */
 
 let mongoClient = null;
 let db = null;
-let users = null;
-let reactions = null;
-let comments = null;
 
-async function connectDB() {
+let usersCollection = null;
+let reactionsCollection = null;
+let commentsCollection = null;
+let commentReactionsCollection = null;
+let emojisCollection = null;
+
+async function connectDatabase() {
   if (!MONGODB_URI) {
-    throw new Error(
-      "MONGODB_URI is not set in the server environment."
-    );
+    console.error("❌ MONGODB_URI is missing.");
+    return;
   }
 
-  console.log("Connecting to MongoDB...");
+  try {
+    mongoClient = new MongoClient(MONGODB_URI);
 
-  mongoClient = new MongoClient(MONGODB_URI, {
-    tls: true,
-    serverSelectionTimeoutMS: 15000,
-    connectTimeoutMS: 15000,
-    socketTimeoutMS: 30000,
-    retryWrites: true
-  });
+    await mongoClient.connect();
 
-  await mongoClient.connect();
+    db = mongoClient.db();
 
-  await mongoClient.db("admin").command({
-    ping: 1
-  });
+    usersCollection = db.collection("users");
+    reactionsCollection = db.collection("reactions");
+    commentsCollection = db.collection("comments");
+    commentReactionsCollection = db.collection("commentReactions");
+    emojisCollection = db.collection("emojis");
 
-  db = mongoClient.db("perfectube");
+    await usersCollection.createIndex(
+      { usernameLower: 1 },
+      { unique: true }
+    );
 
-  users = db.collection("users");
-  reactions = db.collection("reactions");
-  comments = db.collection("comments");
+    await reactionsCollection.createIndex(
+      { userId: 1, videoId: 1 },
+      { unique: true }
+    );
 
-  await users.createIndex(
-    {
-      usernameLower: 1
-    },
-    {
-      unique: true
-    }
-  );
+    await commentsCollection.createIndex({
+      videoId: 1,
+      createdAt: 1
+    });
 
-  await reactions.createIndex(
-    {
-      userId: 1,
-      videoId: 1
-    },
-    {
-      unique: true
-    }
-  );
+    await commentsCollection.createIndex({
+      parentId: 1
+    });
 
-  await comments.createIndex({
-    videoId: 1,
-    createdAt: -1
-  });
+    await commentReactionsCollection.createIndex(
+      { userId: 1, commentId: 1 },
+      { unique: true }
+    );
 
-  console.log("MongoDB connected successfully.");
+    await emojisCollection.createIndex(
+      { nameLower: 1 },
+      { unique: true }
+    );
+
+    console.log("✅ MongoDB connected.");
+  } catch (error) {
+    console.error("❌ MongoDB connection failed:", error.message);
+  }
 }
 
-function requireDB(res) {
-  if (
-    !db ||
-    !users ||
-    !reactions ||
-    !comments
-  ) {
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function isDatabaseReady() {
+  return !!db;
+}
+
+function requireDatabase(res) {
+  if (!isDatabaseReady()) {
     res.status(503).json({
-      error:
-        "Online database is temporarily unavailable. The server could not connect to MongoDB."
+      error: "Database is not connected."
     });
 
     return false;
@@ -206,10 +181,10 @@ function requireDB(res) {
   return true;
 }
 
-function makeToken(user) {
+function createToken(user) {
   return jwt.sign(
     {
-      id: String(user._id),
+      id: user._id.toString(),
       username: user.username
     },
     JWT_SECRET,
@@ -219,480 +194,687 @@ function makeToken(user) {
   );
 }
 
-function auth(req, res, next) {
-  const header =
-    req.headers.authorization || "";
+function getTokenFromRequest(req) {
+  const header = req.headers.authorization;
 
-  const token = header.startsWith("Bearer ")
-    ? header.slice(7)
-    : null;
+  if (!header) return null;
 
-  if (!token) {
-    return res.status(401).json({
-      error: "Login required."
-    });
+  if (!header.startsWith("Bearer ")) {
+    return null;
   }
+
+  return header.slice(7);
+}
+
+function getAuthUser(req) {
+  const token = getTokenFromRequest(req);
+
+  if (!token) return null;
 
   try {
-    req.user = jwt.verify(
-      token,
-      JWT_SECRET
-    );
-
-    next();
+    return jwt.verify(token, JWT_SECRET);
   } catch {
+    return null;
+  }
+}
+
+function requireAuth(req, res, next) {
+  const user = getAuthUser(req);
+
+  if (!user) {
     return res.status(401).json({
-      error:
-        "Your session expired. Please log in again."
+      error: "You must be logged in."
     });
   }
+
+  req.user = user;
+  next();
 }
 
-async function youtube(pathname, params = {}) {
+function optionalAuth(req, res, next) {
+  req.user = getAuthUser(req);
+  next();
+}
+
+function safeObjectId(value) {
+  if (!value) return null;
+
+  try {
+    return new ObjectId(value);
+  } catch {
+    return null;
+  }
+}
+
+function cleanUsername(username) {
+  return String(username || "").trim();
+}
+
+function cleanUsernameLower(username) {
+  return cleanUsername(username).toLowerCase();
+}
+
+function cleanCommentText(text) {
+  return String(text || "").trim();
+}
+
+function normalizeReaction(value) {
+  if (
+    value === "like" ||
+    value === "liked" ||
+    value === 1 ||
+    value === "1"
+  ) {
+    return 1;
+  }
+
+  if (
+    value === "dislike" ||
+    value === "disliked" ||
+    value === -1 ||
+    value === "-1"
+  ) {
+    return -1;
+  }
+
+  return 0;
+}
+
+function formatUser(user) {
+  if (!user) {
+    return {
+      id: null,
+      username: "Unknown",
+      avatar: null
+    };
+  }
+
+  return {
+    id: user._id ? user._id.toString() : user.id || null,
+    username: user.username || "Unknown",
+    avatar: user.avatar || null
+  };
+}
+
+function formatComment(comment, userMap, reactionMap) {
+  const author =
+    userMap.get(String(comment.userId)) || {
+      username: comment.username || "Unknown",
+      avatar: comment.avatar || null,
+      id: String(comment.userId || "")
+    };
+
+  const reaction = reactionMap.get(String(comment._id));
+
+  return {
+    id: comment._id.toString(),
+    _id: comment._id.toString(),
+
+    videoId: comment.videoId,
+
+    text: comment.text,
+
+    parentId: comment.parentId || null,
+
+    user: {
+      id: author.id || null,
+      username: author.username || "Unknown",
+      avatar: author.avatar || null
+    },
+
+    username: author.username || "Unknown",
+    avatar: author.avatar || null,
+
+    createdAt: comment.createdAt,
+
+    likes: reaction?.likes || 0,
+    dislikes: reaction?.dislikes || 0,
+
+    likeCount: reaction?.likes || 0,
+    dislikeCount: reaction?.dislikes || 0,
+
+    userReaction: reaction?.userReaction || 0
+  };
+}
+
+/* =========================================================
+   YOUTUBE API
+========================================================= */
+
+async function youtubeRequest(endpoint, params = {}) {
   if (!YOUTUBE_API_KEY) {
-    throw new Error(
-      "YOUTUBE_API_KEY is missing."
-    );
+    throw new Error("YOUTUBE_API_KEY is missing.");
   }
 
-  const url = new URL(
-    "https://www.googleapis.com/youtube/v3/" +
-      pathname
-  );
-
-  url.searchParams.set(
-    "key",
-    YOUTUBE_API_KEY
-  );
-
-  for (const [key, value] of Object.entries(
-    params
-  )) {
-    url.searchParams.set(key, value);
-  }
-
-  const response = await fetch(url);
-  const data = await response.json();
-
-  if (!response.ok) {
-    throw new Error(
-      data?.error?.message ||
-        "YouTube API request failed."
-    );
-  }
-
-  return data;
-}
-
-async function resolveHandle(handle) {
-  if (resolvedChannels.has(handle)) {
-    return resolvedChannels.get(handle);
-  }
-
-  const data = await youtube("channels", {
-    part: "id,snippet,contentDetails",
-    forHandle: handle.replace(/^@/, "")
+  const searchParams = new URLSearchParams({
+    ...params,
+    key: YOUTUBE_API_KEY
   });
 
-  const item = data.items?.[0];
+  const url =
+    `https://www.googleapis.com/youtube/v3/${endpoint}?` +
+    searchParams.toString();
 
-  if (!item) {
+  const response = await fetch(url);
+
+  if (!response.ok) {
+    const text = await response.text();
+
     throw new Error(
-      "Could not find " + handle
+      `YouTube API error ${response.status}: ${text}`
     );
   }
 
-  resolvedChannels.set(handle, item);
-
-  return item;
+  return response.json();
 }
 
-async function getVideosForChannel(channel) {
-  const real = await resolveHandle(
-    channel.handle
-  );
+async function getChannelVideos(channel, maxResults = 12) {
+  const searchData = await youtubeRequest("search", {
+    part: "snippet",
+    channelId: channel.id,
+    maxResults,
+    order: "date",
+    type: "video"
+  });
 
-  const uploads =
-    real.contentDetails.relatedPlaylists.uploads;
+  const ids = (searchData.items || [])
+    .map(item => item.id?.videoId)
+    .filter(Boolean);
 
-  const data = await youtube(
-    "playlistItems",
-    {
-      part: "snippet,contentDetails",
-      playlistId: uploads,
-      maxResults: "15"
-    }
-  );
+  if (!ids.length) {
+    return [];
+  }
 
-  return (data.items || []).map(item => ({
-    id: item.contentDetails.videoId,
+  const videoData = await youtubeRequest("videos", {
+    part: "snippet,contentDetails,statistics",
+    id: ids.join(",")
+  });
 
-    title: item.snippet.title,
+  return (videoData.items || []).map(video => ({
+    id: video.id,
 
-    description:
-      item.snippet.description,
+    title: video.snippet?.title || "Untitled",
 
-    publishedAt:
-      item.snippet.publishedAt,
+    description: video.snippet?.description || "",
 
-    channelId: real.id,
+    publishedAt: video.snippet?.publishedAt || null,
 
-    channelName:
-      real.snippet.title,
+    channelId: video.snippet?.channelId || channel.id,
 
-    channelHandle:
-      channel.handle,
-
-    channelAvatar:
-      real.snippet.thumbnails?.default?.url ||
-      "",
+    channelTitle:
+      video.snippet?.channelTitle ||
+      channel.name,
 
     thumbnail:
-      "https://i.ytimg.com/vi/" +
-      item.contentDetails.videoId +
-      "/hqdefault.jpg",
+      video.snippet?.thumbnails?.maxres?.url ||
+      video.snippet?.thumbnails?.high?.url ||
+      video.snippet?.thumbnails?.medium?.url ||
+      video.snippet?.thumbnails?.default?.url ||
+      "",
+
+    thumbnails: video.snippet?.thumbnails || {},
+
+    duration:
+      video.contentDetails?.duration || null,
+
+    views:
+      Number(video.statistics?.viewCount || 0),
+
+    likes:
+      Number(video.statistics?.likeCount || 0),
+
+    comments:
+      Number(video.statistics?.commentCount || 0),
 
     url:
-      "https://www.youtube.com/watch?v=" +
-      item.contentDetails.videoId,
+      `https://www.youtube.com/watch?v=${video.id}`,
 
-    sourceType:
-      channel.type
+    embedUrl:
+      `https://www.youtube.com/embed/${video.id}`,
+
+    channel: {
+      id: video.snippet?.channelId || channel.id,
+      name:
+        video.snippet?.channelTitle ||
+        channel.name
+    }
   }));
 }
 
+/* =========================================================
+   CONFIG
+========================================================= */
+
 app.get("/api/config", (req, res) => {
   res.json({
-    name: "Perfectube",
-    channels: CHANNELS,
-    online: Boolean(db),
-    youtubeConfigured:
-      Boolean(YOUTUBE_API_KEY)
+    siteName: "PerfecTube",
+    youtubeEnabled: !!YOUTUBE_API_KEY,
+    databaseEnabled: !!MONGODB_URI,
+    features: {
+      shorts: true,
+      comments: true,
+      commentLikes: true,
+      replies: true,
+      emojis: true,
+      reactions: true
+    }
   });
 });
 
+/* =========================================================
+   VIDEOS
+========================================================= */
+
 app.get("/api/videos", async (req, res) => {
   try {
-    const wanted =
-      req.query.type || "All";
+    const type = String(req.query.type || "all");
 
-    const selected =
-      CHANNELS.filter(
-        c =>
-          wanted === "All" ||
-          c.type === wanted
-      );
+    if (!YOUTUBE_API_KEY) {
+      return res.status(503).json({
+        error: "YouTube API key is not configured."
+      });
+    }
 
-    const groups =
-      await Promise.all(
-        selected.map(async c => {
-          try {
-            return await getVideosForChannel(
-              c
-            );
-          } catch (e) {
-            console.error(
-              "YouTube error for " +
-                c.handle +
-                ":",
-              e.message
-            );
+    let results = [];
 
-            return [];
-          }
-        })
-      );
-
-    const videos = groups
-      .flat()
-      .sort(
-        (a, b) =>
-          new Date(b.publishedAt) -
-          new Date(a.publishedAt)
-      );
-
-    res.json({
-      videos
-    });
-  } catch (e) {
-    console.error(
-      "Videos error:",
-      e
+    const shuffledChannels = [...CHANNELS].sort(
+      () => Math.random() - 0.5
     );
 
+    for (const channel of shuffledChannels) {
+      try {
+        const amount =
+          type === "shorts"
+            ? 15
+            : 10;
+
+        const videos = await getChannelVideos(
+          channel,
+          amount
+        );
+
+        results.push(...videos);
+
+        if (results.length >= 60) {
+          break;
+        }
+      } catch (error) {
+        console.error(
+          `YouTube channel ${channel.name} failed:`,
+          error.message
+        );
+      }
+    }
+
+    const unique = [];
+    const seen = new Set();
+
+    for (const video of results) {
+      if (!video.id) continue;
+
+      if (seen.has(video.id)) continue;
+
+      seen.add(video.id);
+      unique.push(video);
+    }
+
+    unique.sort(
+      () => Math.random() - 0.5
+    );
+
+    res.json(unique);
+  } catch (error) {
+    console.error("Videos error:", error);
+
     res.status(500).json({
-      error: e.message
+      error: "Failed to load videos."
     });
   }
 });
 
-app.get("/api/me", auth, async (req, res) => {
-  if (!requireDB(res)) return;
+/* =========================================================
+   CURRENT USER
+========================================================= */
 
-  try {
-    const user =
-      await users.findOne(
-        {
-          _id: new ObjectId(
-            req.user.id
-          )
-        },
-        {
-          projection: {
-            passwordHash: 0
-          }
-        }
-      );
-
-    if (!user) {
-      return res.status(404).json({
-        error: "User not found."
+app.get(
+  "/api/me",
+  optionalAuth,
+  async (req, res) => {
+    if (!req.user) {
+      return res.json({
+        loggedIn: false,
+        user: null
       });
     }
 
-    res.json({
-      user
-    });
-  } catch (e) {
-    console.error(
-      "Me error:",
-      e
-    );
-
-    res.status(500).json({
-      error:
-        "Could not load your account."
-    });
-  }
-});
-
-app.post(
-  "/api/signup",
-  upload.single("avatar"),
-  async (req, res) => {
-    if (!requireDB(res)) return;
+    if (!requireDatabase(res)) return;
 
     try {
-      const username =
-        String(
-          req.body.username || ""
-        ).trim();
+      const userId = safeObjectId(req.user.id);
 
-      const password =
-        String(
-          req.body.password || ""
-        );
-
-      if (
-        !/^[a-zA-Z0-9_]{3,24}$/.test(
-          username
-        )
-      ) {
-        return res.status(400).json({
-          error:
-            "Name must be 3-24 characters using letters, numbers or underscores."
+      if (!userId) {
+        return res.json({
+          loggedIn: false,
+          user: null
         });
       }
-
-      if (password.length < 6) {
-        return res.status(400).json({
-          error:
-            "Password must be at least 6 characters."
-        });
-      }
-
-      const usernameLower =
-        username.toLowerCase();
-
-      const existing =
-        await users.findOne({
-          usernameLower
-        });
-
-      if (existing) {
-        return res.status(409).json({
-          error:
-            "That name is already taken."
-        });
-      }
-
-      const passwordHash =
-        await bcrypt.hash(
-          password,
-          12
-        );
-
-      let avatar = "";
-
-      if (req.file) {
-        avatar =
-          "data:" +
-          req.file.mimetype +
-          ";base64," +
-          req.file.buffer.toString(
-            "base64"
-          );
-      }
-
-      const user = {
-        username,
-        usernameLower,
-        passwordHash,
-        avatar,
-        createdAt: new Date()
-      };
-
-      const result =
-        await users.insertOne(
-          user
-        );
-
-      user._id =
-        result.insertedId;
-
-      res.json({
-        token: makeToken(user),
-
-        user: {
-          _id: user._id,
-          username: user.username,
-          avatar: user.avatar
-        }
-      });
-    } catch (e) {
-      console.error(
-        "Signup error:",
-        e
-      );
-
-      if (e?.code === 11000) {
-        return res.status(409).json({
-          error:
-            "That name is already taken."
-        });
-      }
-
-      res.status(500).json({
-        error:
-          "Could not create your account."
-      });
-    }
-  }
-);
-
-app.post(
-  "/api/login",
-  async (req, res) => {
-    if (!requireDB(res)) return;
-
-    try {
-      const username =
-        String(
-          req.body.username || ""
-        )
-          .trim()
-          .toLowerCase();
-
-      const password =
-        String(
-          req.body.password || ""
-        );
 
       const user =
-        await users.findOne({
-          usernameLower:
-            username
-        });
+        await usersCollection.findOne(
+          { _id: userId },
+          {
+            projection: {
+              passwordHash: 0
+            }
+          }
+        );
 
-      if (
-        !user ||
-        !(await bcrypt.compare(
-          password,
-          user.passwordHash
-        ))
-      ) {
-        return res.status(401).json({
-          error:
-            "Wrong name or password."
+      if (!user) {
+        return res.json({
+          loggedIn: false,
+          user: null
         });
       }
 
       res.json({
-        token: makeToken(user),
-
-        user: {
-          _id: user._id,
-          username: user.username,
-          avatar: user.avatar
-        }
+        loggedIn: true,
+        user: formatUser(user)
       });
-    } catch (e) {
-      console.error(
-        "Login error:",
-        e
-      );
+    } catch (error) {
+      console.error("Me error:", error);
 
       res.status(500).json({
-        error:
-          "Could not log you in."
+        error: "Failed to load user."
       });
     }
   }
 );
+
+/* =========================================================
+   SIGNUP
+========================================================= */
+
+app.post("/api/signup", async (req, res) => {
+  if (!requireDatabase(res)) return;
+
+  try {
+    const username = cleanUsername(req.body.username);
+    const password = String(req.body.password || "");
+
+    if (username.length < 3) {
+      return res.status(400).json({
+        error: "Username must be at least 3 characters."
+      });
+    }
+
+    if (username.length > 24) {
+      return res.status(400).json({
+        error: "Username must be 24 characters or less."
+      });
+    }
+
+    if (!/^[a-zA-Z0-9_.-]+$/.test(username)) {
+      return res.status(400).json({
+        error:
+          "Username can only contain letters, numbers, _, - and ."
+      });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({
+        error: "Password must be at least 6 characters."
+      });
+    }
+
+    const usernameLower =
+      cleanUsernameLower(username);
+
+    const existing =
+      await usersCollection.findOne({
+        usernameLower
+      });
+
+    if (existing) {
+      return res.status(409).json({
+        error: "Username is already taken."
+      });
+    }
+
+    const passwordHash =
+      await bcrypt.hash(password, 12);
+
+    const user = {
+      username,
+      usernameLower,
+      passwordHash,
+      avatar: null,
+      createdAt: new Date()
+    };
+
+    const result =
+      await usersCollection.insertOne(user);
+
+    user._id = result.insertedId;
+
+    const token = createToken(user);
+
+    res.status(201).json({
+      token,
+
+      user: formatUser(user)
+    });
+  } catch (error) {
+    console.error("Signup error:", error);
+
+    if (error.code === 11000) {
+      return res.status(409).json({
+        error: "Username is already taken."
+      });
+    }
+
+    res.status(500).json({
+      error: "Signup failed."
+    });
+  }
+});
+
+/* =========================================================
+   LOGIN
+========================================================= */
+
+app.post("/api/login", async (req, res) => {
+  if (!requireDatabase(res)) return;
+
+  try {
+    const username =
+      cleanUsernameLower(req.body.username);
+
+    const password =
+      String(req.body.password || "");
+
+    if (!username || !password) {
+      return res.status(400).json({
+        error: "Username and password are required."
+      });
+    }
+
+    const user =
+      await usersCollection.findOne({
+        usernameLower: username
+      });
+
+    if (!user) {
+      return res.status(401).json({
+        error: "Invalid username or password."
+      });
+    }
+
+    const valid =
+      await bcrypt.compare(
+        password,
+        user.passwordHash
+      );
+
+    if (!valid) {
+      return res.status(401).json({
+        error: "Invalid username or password."
+      });
+    }
+
+    const token = createToken(user);
+
+    res.json({
+      token,
+
+      user: formatUser(user)
+    });
+  } catch (error) {
+    console.error("Login error:", error);
+
+    res.status(500).json({
+      error: "Login failed."
+    });
+  }
+});
+
+/* =========================================================
+   AVATAR UPLOAD
+========================================================= */
+
+async function saveAvatar(req, res) {
+  if (!requireDatabase(res)) return;
+
+  try {
+    if (!req.user) {
+      return res.status(401).json({
+        error: "You must be logged in."
+      });
+    }
+
+    let avatar = null;
+
+    if (req.file) {
+      const mime = req.file.mimetype || "";
+
+      if (!mime.startsWith("image/")) {
+        return res.status(400).json({
+          error: "Only image files are allowed."
+        });
+      }
+
+      avatar =
+        `data:${mime};base64,` +
+        req.file.buffer.toString("base64");
+    } else if (req.body.avatar) {
+      avatar = String(req.body.avatar);
+
+      if (avatar.length > 2_500_000) {
+        return res.status(400).json({
+          error: "Avatar is too large."
+        });
+      }
+    } else {
+      return res.status(400).json({
+        error: "No avatar was provided."
+      });
+    }
+
+    const userId =
+      safeObjectId(req.user.id);
+
+    if (!userId) {
+      return res.status(400).json({
+        error: "Invalid user."
+      });
+    }
+
+    await usersCollection.updateOne(
+      { _id: userId },
+      {
+        $set: {
+          avatar,
+          updatedAt: new Date()
+        }
+      }
+    );
+
+    res.json({
+      success: true,
+      avatar
+    });
+  } catch (error) {
+    console.error("Avatar error:", error);
+
+    res.status(500).json({
+      error: "Failed to update avatar."
+    });
+  }
+}
+
+app.post(
+  "/api/avatar",
+  requireAuth,
+  upload.single("avatar"),
+  saveAvatar
+);
+
+app.post(
+  "/api/upload-avatar",
+  requireAuth,
+  upload.single("avatar"),
+  saveAvatar
+);
+
+/* =========================================================
+   VIDEO REACTIONS
+========================================================= */
 
 app.post(
   "/api/reaction",
-  auth,
+  requireAuth,
   async (req, res) => {
-    if (!requireDB(res)) return;
+    if (!requireDatabase(res)) return;
 
     try {
       const videoId =
-        String(
-          req.body.videoId || ""
-        );
+        String(req.body.videoId || "").trim();
 
-      const reaction =
-        String(
-          req.body.reaction || "none"
-        );
+      const value =
+        normalizeReaction(req.body.value);
 
-      if (
-        !videoId ||
-        ![
-          "like",
-          "dislike",
-          "none"
-        ].includes(reaction)
-      ) {
+      if (!videoId) {
         return res.status(400).json({
-          error:
-            "Invalid reaction."
+          error: "Video ID is required."
         });
       }
 
-      const filter = {
-        userId: req.user.id,
-        videoId
-      };
+      const userId =
+        String(req.user.id);
 
-      if (
-        reaction === "none"
-      ) {
-        await reactions.deleteOne(
-          filter
-        );
+      const existing =
+        await reactionsCollection.findOne({
+          userId,
+          videoId
+        });
+
+      if (value === 0) {
+        if (existing) {
+          await reactionsCollection.deleteOne({
+            _id: existing._id
+          });
+        }
       } else {
-        await reactions.updateOne(
-          filter,
+        await reactionsCollection.updateOne(
+          {
+            userId,
+            videoId
+          },
           {
             $set: {
-              userId:
-                req.user.id,
+              userId,
               videoId,
-              reaction,
-              updatedAt:
-                new Date()
+              value,
+              updatedAt: new Date()
             }
           },
           {
@@ -702,373 +884,829 @@ app.post(
       }
 
       const counts =
-        await reactions
-          .aggregate([
-            {
-              $match: {
-                videoId
-              }
-            },
-            {
-              $group: {
-                _id: "$reaction",
-                count: {
-                  $sum: 1
-                }
-              }
-            }
-          ])
-          .toArray();
-
-      const result = {
-        like: 0,
-        dislike: 0
-      };
-
-      counts.forEach(x => {
-        result[x._id] =
-          x.count;
-      });
-
-      const mine =
-        await reactions.findOne(
-          filter
+        await getVideoReactionCounts(
+          videoId,
+          userId
         );
 
-      res.json({
-        ...result,
-        mine:
-          mine?.reaction ||
-          "none"
-      });
-    } catch (e) {
-      console.error(
-        "Reaction error:",
-        e
-      );
+      res.json(counts);
+    } catch (error) {
+      console.error("Reaction error:", error);
 
       res.status(500).json({
-        error:
-          "Could not save reaction."
+        error: "Failed to update reaction."
       });
     }
   }
 );
+
+async function getVideoReactionCounts(
+  videoId,
+  userId = null
+) {
+  const rows =
+    await reactionsCollection
+      .aggregate([
+        {
+          $match: {
+            videoId
+          }
+        },
+        {
+          $group: {
+            _id: "$value",
+            count: {
+              $sum: 1
+            }
+          }
+        }
+      ])
+      .toArray();
+
+  let likes = 0;
+  let dislikes = 0;
+
+  for (const row of rows) {
+    if (row._id === 1) {
+      likes = row.count;
+    }
+
+    if (row._id === -1) {
+      dislikes = row.count;
+    }
+  }
+
+  let userReaction = 0;
+
+  if (userId) {
+    const own =
+      await reactionsCollection.findOne({
+        userId,
+        videoId
+      });
+
+    if (own) {
+      userReaction = own.value;
+    }
+  }
+
+  return {
+    likes,
+    dislikes,
+
+    like: likes,
+    dislike: dislikes,
+
+    userReaction
+  };
+}
 
 app.get(
   "/api/reactions/:videoId",
+  optionalAuth,
   async (req, res) => {
-    if (!requireDB(res)) return;
+    if (!requireDatabase(res)) return;
 
     try {
-      const videoId =
-        req.params.videoId;
+      const userId =
+        req.user
+          ? String(req.user.id)
+          : null;
 
       const counts =
-        await reactions
-          .aggregate([
-            {
-              $match: {
-                videoId
-              }
-            },
-            {
-              $group: {
-                _id: "$reaction",
-                count: {
-                  $sum: 1
-                }
-              }
-            }
-          ])
-          .toArray();
+        await getVideoReactionCounts(
+          req.params.videoId,
+          userId
+        );
 
-      const result = {
-        like: 0,
-        dislike: 0,
-        mine: "none"
-      };
-
-      counts.forEach(x => {
-        result[x._id] =
-          x.count;
-      });
-
-      const header =
-        req.headers.authorization ||
-        "";
-
-      if (
-        header.startsWith(
-          "Bearer "
-        )
-      ) {
-        try {
-          const payload =
-            jwt.verify(
-              header.slice(7),
-              JWT_SECRET
-            );
-
-          const mine =
-            await reactions.findOne({
-              userId:
-                payload.id,
-              videoId
-            });
-
-          if (mine) {
-            result.mine =
-              mine.reaction;
-          }
-        } catch {}
-      }
-
-      res.json(result);
-    } catch (e) {
+      res.json(counts);
+    } catch (error) {
       console.error(
-        "Reaction fetch error:",
-        e
+        "Reaction counts error:",
+        error
       );
 
       res.status(500).json({
-        error:
-          "Could not load reactions."
+        error: "Failed to load reactions."
       });
     }
   }
 );
 
+/* =========================================================
+   COMMENTS
+========================================================= */
+
 app.get(
   "/api/comments/:videoId",
+  optionalAuth,
   async (req, res) => {
-    if (!requireDB(res)) return;
+    if (!requireDatabase(res)) return;
 
     try {
-      const rows =
-        await comments
+      const videoId =
+        String(req.params.videoId || "").trim();
+
+      if (!videoId) {
+        return res.status(400).json({
+          error: "Video ID is required."
+        });
+      }
+
+      const comments =
+        await commentsCollection
           .find({
-            videoId:
-              req.params.videoId
+            videoId
           })
           .sort({
-            createdAt: -1
+            createdAt: 1
           })
-          .limit(100)
           .toArray();
 
-      res.json({
-        comments: rows.map(c => ({
-          id: String(c._id),
-          username:
-            c.username,
-          avatar:
-            c.avatar,
-          text:
-            c.text,
-          createdAt:
-            c.createdAt
-        }))
-      });
-    } catch (e) {
+      if (!comments.length) {
+        return res.json([]);
+      }
+
+      const userIds = [
+        ...new Set(
+          comments
+            .map(comment =>
+              String(comment.userId)
+            )
+            .filter(Boolean)
+        )
+      ];
+
+      const objectIds = userIds
+        .map(id => safeObjectId(id))
+        .filter(Boolean);
+
+      const users =
+        await usersCollection
+          .find({
+            _id: {
+              $in: objectIds
+            }
+          })
+          .project({
+            passwordHash: 0
+          })
+          .toArray();
+
+      const userMap = new Map();
+
+      for (const user of users) {
+        userMap.set(
+          user._id.toString(),
+          {
+            id: user._id.toString(),
+            username: user.username,
+            avatar: user.avatar || null
+          }
+        );
+      }
+
+      const commentIds =
+        comments.map(comment =>
+          comment._id.toString()
+        );
+
+      const reactionRows =
+        await commentReactionsCollection
+          .find({
+            commentId: {
+              $in: commentIds
+            }
+          })
+          .toArray();
+
+      const reactionMap =
+        new Map();
+
+      for (const commentId of commentIds) {
+        const rows =
+          reactionRows.filter(
+            row =>
+              row.commentId === commentId
+          );
+
+        let likes = 0;
+        let dislikes = 0;
+        let userReaction = 0;
+
+        for (const row of rows) {
+          if (row.value === 1) {
+            likes++;
+          }
+
+          if (row.value === -1) {
+            dislikes++;
+          }
+
+          if (
+            req.user &&
+            row.userId === String(req.user.id)
+          ) {
+            userReaction = row.value;
+          }
+        }
+
+        reactionMap.set(
+          commentId,
+          {
+            likes,
+            dislikes,
+            userReaction
+          }
+        );
+      }
+
+      const formatted =
+        comments.map(comment =>
+          formatComment(
+            comment,
+            userMap,
+            reactionMap
+          )
+        );
+
+      res.json(formatted);
+    } catch (error) {
       console.error(
-        "Comments fetch error:",
-        e
+        "Comments load error:",
+        error
+      );
+
+      res.status(500).json({
+        error: "Failed to load comments."
+      });
+    }
+  }
+);
+
+/* =========================================================
+   CREATE COMMENT / REPLY
+========================================================= */
+
+app.post(
+  "/api/comments",
+  requireAuth,
+  async (req, res) => {
+    if (!requireDatabase(res)) return;
+
+    try {
+      const videoId =
+        String(req.body.videoId || "").trim();
+
+      const text =
+        cleanCommentText(req.body.text);
+
+      const parentId =
+        req.body.parentId
+          ? String(req.body.parentId)
+          : null;
+
+      if (!videoId) {
+        return res.status(400).json({
+          error: "Video ID is required."
+        });
+      }
+
+      if (!text) {
+        return res.status(400).json({
+          error: "Comment cannot be empty."
+        });
+      }
+
+      if (text.length > 2000) {
+        return res.status(400).json({
+          error:
+            "Comment must be 2000 characters or less."
+        });
+      }
+
+      if (parentId) {
+        const parentObjectId =
+          safeObjectId(parentId);
+
+        if (!parentObjectId) {
+          return res.status(400).json({
+            error: "Invalid reply."
+          });
+        }
+
+        const parent =
+          await commentsCollection.findOne({
+            _id: parentObjectId
+          });
+
+        if (!parent) {
+          return res.status(404).json({
+            error: "Parent comment not found."
+          });
+        }
+
+        if (parent.videoId !== videoId) {
+          return res.status(400).json({
+            error:
+              "Reply must belong to the same video."
+          });
+        }
+      }
+
+      const userId =
+        String(req.user.id);
+
+      const userObjectId =
+        safeObjectId(userId);
+
+      const user =
+        userObjectId
+          ? await usersCollection.findOne(
+              { _id: userObjectId },
+              {
+                projection: {
+                  passwordHash: 0
+                }
+              }
+            )
+          : null;
+
+      const comment = {
+        videoId,
+
+        userId,
+
+        text,
+
+        parentId,
+
+        createdAt: new Date()
+      };
+
+      const result =
+        await commentsCollection.insertOne(
+          comment
+        );
+
+      comment._id =
+        result.insertedId;
+
+      res.status(201).json({
+        id: comment._id.toString(),
+        _id: comment._id.toString(),
+
+        videoId,
+
+        text,
+
+        parentId,
+
+        user: formatUser(user),
+
+        username:
+          user?.username ||
+          req.user.username ||
+          "Unknown",
+
+        avatar:
+          user?.avatar ||
+          null,
+
+        createdAt:
+          comment.createdAt,
+
+        likes: 0,
+        dislikes: 0,
+
+        likeCount: 0,
+        dislikeCount: 0,
+
+        userReaction: 0
+      });
+    } catch (error) {
+      console.error(
+        "Comment creation error:",
+        error
+      );
+
+      res.status(500).json({
+        error: "Failed to post comment."
+      });
+    }
+  }
+);
+
+/* =========================================================
+   COMMENT LIKE / DISLIKE
+========================================================= */
+
+app.post(
+  "/api/comment-reaction",
+  requireAuth,
+  async (req, res) => {
+    if (!requireDatabase(res)) return;
+
+    try {
+      const commentId =
+        String(req.body.commentId || "").trim();
+
+      const value =
+        normalizeReaction(req.body.value);
+
+      if (!commentId) {
+        return res.status(400).json({
+          error: "Comment ID is required."
+        });
+      }
+
+      const objectId =
+        safeObjectId(commentId);
+
+      if (!objectId) {
+        return res.status(400).json({
+          error: "Invalid comment ID."
+        });
+      }
+
+      const comment =
+        await commentsCollection.findOne({
+          _id: objectId
+        });
+
+      if (!comment) {
+        return res.status(404).json({
+          error: "Comment not found."
+        });
+      }
+
+      const userId =
+        String(req.user.id);
+
+      const existing =
+        await commentReactionsCollection.findOne({
+          userId,
+          commentId
+        });
+
+      if (value === 0) {
+        if (existing) {
+          await commentReactionsCollection.deleteOne({
+            _id: existing._id
+          });
+        }
+      } else {
+        await commentReactionsCollection.updateOne(
+          {
+            userId,
+            commentId
+          },
+          {
+            $set: {
+              userId,
+              commentId,
+              value,
+              updatedAt: new Date()
+            }
+          },
+          {
+            upsert: true
+          }
+        );
+      }
+
+      const rows =
+        await commentReactionsCollection
+          .find({
+            commentId
+          })
+          .toArray();
+
+      let likes = 0;
+      let dislikes = 0;
+      let userReaction = 0;
+
+      for (const row of rows) {
+        if (row.value === 1) {
+          likes++;
+        }
+
+        if (row.value === -1) {
+          dislikes++;
+        }
+
+        if (row.userId === userId) {
+          userReaction = row.value;
+        }
+      }
+
+      res.json({
+        success: true,
+
+        likes,
+        dislikes,
+
+        likeCount: likes,
+        dislikeCount: dislikes,
+
+        userReaction
+      });
+    } catch (error) {
+      console.error(
+        "Comment reaction error:",
+        error
       );
 
       res.status(500).json({
         error:
-          "Could not load comments."
+          "Failed to update comment reaction."
+      });
+    }
+  }
+);
+
+/* =========================================================
+   CUSTOM EMOJIS
+========================================================= */
+
+app.get(
+  "/api/emojis",
+  async (req, res) => {
+    if (!requireDatabase(res)) return;
+
+    try {
+      const emojis =
+        await emojisCollection
+          .find({})
+          .sort({
+            createdAt: 1
+          })
+          .limit(500)
+          .toArray();
+
+      res.json(
+        emojis.map(emoji => ({
+          id: emoji._id.toString(),
+          name: emoji.name,
+          emoji: emoji.emoji,
+          image: emoji.image || null,
+          createdAt: emoji.createdAt
+        }))
+      );
+    } catch (error) {
+      console.error(
+        "Emoji load error:",
+        error
+      );
+
+      res.status(500).json({
+        error: "Failed to load emojis."
       });
     }
   }
 );
 
 app.post(
-  "/api/comments",
-  auth,
+  "/api/emojis",
+  requireAuth,
   async (req, res) => {
-    if (!requireDB(res)) return;
+    if (!requireDatabase(res)) return;
 
     try {
-      const videoId =
-        String(
-          req.body.videoId || ""
-        );
+      const name =
+        String(req.body.name || "")
+          .trim()
+          .replace(/\s+/g, "_");
 
-      const text =
-        String(
-          req.body.text || ""
-        ).trim();
+      const emoji =
+        String(req.body.emoji || "")
+        .trim();
 
-      if (
-        !videoId ||
-        !text
-      ) {
+      const image =
+        req.body.image
+          ? String(req.body.image)
+          : null;
+
+      if (!name) {
         return res.status(400).json({
-          error:
-            "Comment cannot be empty."
+          error: "Emoji name is required."
         });
       }
 
-      if (text.length > 500) {
+      if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
         return res.status(400).json({
           error:
-            "Comment is too long (500 characters max)."
+            "Emoji name can only contain letters, numbers, _ and -."
         });
       }
 
-      const user =
-        await users.findOne({
-          _id: new ObjectId(
-            req.user.id
-          )
-        });
-
-      if (!user) {
-        return res.status(404).json({
+      if (name.length > 32) {
+        return res.status(400).json({
           error:
-            "User not found."
+            "Emoji name must be 32 characters or less."
+        });
+      }
+
+      if (!emoji && !image) {
+        return res.status(400).json({
+          error:
+            "Provide an emoji character or image."
+        });
+      }
+
+      if (image && image.length > 2_000_000) {
+        return res.status(400).json({
+          error: "Emoji image is too large."
         });
       }
 
       const doc = {
-        videoId,
-        userId:
-          req.user.id,
-        username:
-          user.username,
-        avatar:
-          user.avatar,
-        text,
-        createdAt:
-          new Date()
+        name,
+        nameLower: name.toLowerCase(),
+        emoji: emoji || null,
+        image: image || null,
+        creatorId: String(req.user.id),
+        createdAt: new Date()
       };
 
       const result =
-        await comments.insertOne(
-          doc
-        );
+        await emojisCollection.insertOne(doc);
 
-      res.json({
-        comment: {
-          id: String(
-            result.insertedId
-          ),
-          username:
-            doc.username,
-          avatar:
-            doc.avatar,
-          text:
-            doc.text,
-          createdAt:
-            doc.createdAt
-        }
+      res.status(201).json({
+        id: result.insertedId.toString(),
+        name: doc.name,
+        emoji: doc.emoji,
+        image: doc.image,
+        createdAt: doc.createdAt
       });
-    } catch (e) {
+    } catch (error) {
+      if (error.code === 11000) {
+        return res.status(409).json({
+          error: "That emoji name already exists."
+        });
+      }
+
       console.error(
-        "Comment error:",
-        e
+        "Emoji creation error:",
+        error
       );
 
       res.status(500).json({
-        error:
-          "Could not post comment."
+        error: "Failed to create emoji."
       });
     }
   }
 );
 
-app.use(
-  (
-    err,
-    req,
-    res,
-    next
-  ) => {
-    console.error(
-      "Server error:",
-      err
-    );
+/* =========================================================
+   DELETE CUSTOM EMOJI
+========================================================= */
 
-    if (
-      err?.code ===
-      "LIMIT_FILE_SIZE"
-    ) {
-      return res.status(400).json({
-        error:
-          "Avatar file is too large. Maximum size is 1 MB."
+app.delete(
+  "/api/emojis/:id",
+  requireAuth,
+  async (req, res) => {
+    if (!requireDatabase(res)) return;
+
+    try {
+      const emojiId =
+        safeObjectId(req.params.id);
+
+      if (!emojiId) {
+        return res.status(400).json({
+          error: "Invalid emoji ID."
+        });
+      }
+
+      const emoji =
+        await emojisCollection.findOne({
+          _id: emojiId
+        });
+
+      if (!emoji) {
+        return res.status(404).json({
+          error: "Emoji not found."
+        });
+      }
+
+      const creatorId =
+        String(emoji.creatorId);
+
+      if (
+        creatorId !==
+        String(req.user.id)
+      ) {
+        return res.status(403).json({
+          error:
+            "You can only delete emojis you created."
+        });
+      }
+
+      await emojisCollection.deleteOne({
+        _id: emojiId
+      });
+
+      res.json({
+        success: true
+      });
+    } catch (error) {
+      console.error(
+        "Emoji deletion error:",
+        error
+      );
+
+      res.status(500).json({
+        error: "Failed to delete emoji."
       });
     }
-
-    if (
-      err?.message ===
-      "Request aborted"
-    ) {
-      return;
-    }
-
-    if (res.headersSent) {
-      return next(err);
-    }
-
-    res.status(500).json({
-      error:
-        "An unexpected server error occurred."
-    });
   }
 );
 
-app.get(
-  "*splat",
-  (req, res) => {
-    res.sendFile(
-      path.join(
-        __dirname,
-        "public",
-        "index.html"
-      )
-    );
+/* =========================================================
+   HEALTH CHECK
+========================================================= */
+
+app.get("/api/health", (req, res) => {
+  res.json({
+    ok: true,
+    database: !!db,
+    youtube: !!YOUTUBE_API_KEY,
+    uptime: process.uptime()
+  });
+});
+
+/* =========================================================
+   API 404
+========================================================= */
+
+app.use("/api", (req, res) => {
+  res.status(404).json({
+    error: "API endpoint not found."
+  });
+});
+
+/* =========================================================
+   GLOBAL ERROR HANDLER
+========================================================= */
+
+app.use((error, req, res, next) => {
+  console.error("Server error:", error);
+
+  if (res.headersSent) {
+    return next(error);
   }
-);
+
+  res.status(500).json({
+    error: "Internal server error."
+  });
+});
+
+/* =========================================================
+   FRONTEND FALLBACK
+========================================================= */
+
+app.get("*splat", (req, res) => {
+  res.sendFile(
+    path.join(__dirname, "public", "index.html")
+  );
+});
+
+/* =========================================================
+   START SERVER
+========================================================= */
 
 async function startServer() {
-  try {
-    await connectDB();
+  await connectDatabase();
 
-    app.listen(
-      PORT,
-      () => {
-        console.log(
-          "Perfectube running on port " +
-            PORT
-        );
-
-        console.log(
-          "Database status: CONNECTED"
-        );
-      }
+  app.listen(PORT, () => {
+    console.log("");
+    console.log("========================================");
+    console.log("        PerfecTube Server");
+    console.log("========================================");
+    console.log(`🚀 Running on port ${PORT}`);
+    console.log(
+      `📁 Frontend: ${path.join(__dirname, "public")}`
     );
-  } catch (err) {
-    console.error(
-      "MongoDB connection failed:"
+    console.log(
+      `🍃 MongoDB: ${db ? "Connected" : "Not connected"}`
     );
-
-    console.error(
-      err?.message || err
+    console.log(
+      `▶️ YouTube API: ${
+        YOUTUBE_API_KEY
+          ? "Configured"
+          : "Not configured"
+      }`
     );
-
-    app.listen(
-      PORT,
-      () => {
-        console.log(
-          "Perfectube running on port " +
-            PORT +
-            " without database"
-        );
-      }
-    );
-  }
+    console.log("========================================");
+    console.log("");
+  });
 }
 
-startServer();
+startServer().catch(error => {
+  console.error(
+    "❌ Failed to start PerfecTube:",
+    error
+  );
+
+  process.exit(1);
+});
