@@ -1,4 +1,3 @@
-```javascript
 require("dotenv").config();
 
 const path = require("path");
@@ -21,26 +20,108 @@ app.use(express.static(path.join(__dirname, "public")));
 
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 1024 * 1024 }
+  limits: {
+    fileSize: 1024 * 1024
+  }
 });
 
 const CHANNELS = [
-  { id: "UC_MIKE_OFF_RECORD", handle: "@MikeOffRecord", name: "Mike Off Record", type: "Comedy & Clips" },
-  { id: "UC_ANAHEIMM", handle: "@Anaheimm", name: "Anaheimm", type: "Comedy & Clips" },
-  { id: "UC_WAGS_WALKS", handle: "@Wags_and_Walks_Pup_Up", name: "Wags & Walks Pup Up", type: "Animals" },
-  { id: "UC_ITS_BASEPLATE", handle: "@ItsBaseplate", name: "ItsBaseplate", type: "Gaming" },
-  { id: "UC_FAJARE_SOKHARI", handle: "@Fajaresokhari", name: "Fajaresokhari", type: "Clips" },
-  { id: "UC_CLIPSDONUT", handle: "@clipsdonut", name: "clipsdonut", type: "Clips" },
-  { id: "UC_MR_STAN01", handle: "@Mr.Stan01", name: "Mr. Stan", type: "Clips" },
-  { id: "UC_UNCDAVIN", handle: "@UncDavin", name: "Unc Davin", type: "Comedy & Clips" },
-  { id: "UC_LAVABLOX01", handle: "@LavaBlox01", name: "LavaBlox01", type: "Gaming" },
-  { id: "UC_BLOBBYCLIPS", handle: "@BlobbyClips", name: "BlobbyClips", type: "Clips" },
-  { id: "UC_PYLAROXD", handle: "@pylaroXD", name: "pylaroXD", type: "Gaming" },
-  { id: "UC_COPYMASTER11", handle: "@CopyMaster11", name: "CopyMaster11", type: "Clips" },
-  { id: "UC_RENOVATEDPOTATO", handle: "@RenovatedPotato", name: "RenovatedPotato", type: "Comedy & Clips" },
-  { id: "UC_ONLYMISALIGNED", handle: "@onlyMisaligned", name: "onlyMisaligned", type: "Clips" },
-  { id: "UC_RIPPEDROBBY", handle: "@RippedRobby", name: "RippedRobby", type: "Comedy & Clips" },
-  { id: "UC_PIXIESGARDEN", handle: "@PixiesGardenReal", name: "PixiesGardenReal", type: "Animals" }
+  {
+    id: "UC_MIKE_OFF_RECORD",
+    handle: "@MikeOffRecord",
+    name: "Mike Off Record",
+    type: "Comedy & Clips"
+  },
+  {
+    id: "UC_ANAHEIMM",
+    handle: "@Anaheimm",
+    name: "Anaheimm",
+    type: "Comedy & Clips"
+  },
+  {
+    id: "UC_WAGS_WALKS",
+    handle: "@Wags_and_Walks_Pup_Up",
+    name: "Wags & Walks Pup Up",
+    type: "Animals"
+  },
+  {
+    id: "UC_ITS_BASEPLATE",
+    handle: "@ItsBaseplate",
+    name: "ItsBaseplate",
+    type: "Gaming"
+  },
+  {
+    id: "UC_FAJARE_SOKHARI",
+    handle: "@Fajaresokhari",
+    name: "Fajaresokhari",
+    type: "Clips"
+  },
+  {
+    id: "UC_CLIPSDONUT",
+    handle: "@clipsdonut",
+    name: "clipsdonut",
+    type: "Clips"
+  },
+  {
+    id: "UC_MR_STAN01",
+    handle: "@Mr.Stan01",
+    name: "Mr. Stan",
+    type: "Clips"
+  },
+  {
+    id: "UC_UNCDAVIN",
+    handle: "@UncDavin",
+    name: "Unc Davin",
+    type: "Comedy & Clips"
+  },
+  {
+    id: "UC_LAVABLOX01",
+    handle: "@LavaBlox01",
+    name: "LavaBlox01",
+    type: "Gaming"
+  },
+  {
+    id: "UC_BLOBBYCLIPS",
+    handle: "@BlobbyClips",
+    name: "BlobbyClips",
+    type: "Clips"
+  },
+  {
+    id: "UC_PYLAROXD",
+    handle: "@pylaroXD",
+    name: "pylaroXD",
+    type: "Gaming"
+  },
+  {
+    id: "UC_COPYMASTER11",
+    handle: "@CopyMaster11",
+    name: "CopyMaster11",
+    type: "Clips"
+  },
+  {
+    id: "UC_RENOVATEDPOTATO",
+    handle: "@RenovatedPotato",
+    name: "RenovatedPotato",
+    type: "Comedy & Clips"
+  },
+  {
+    id: "UC_ONLYMISALIGNED",
+    handle: "@onlyMisaligned",
+    name: "onlyMisaligned",
+    type: "Clips"
+  },
+  {
+    id: "UC_RIPPEDROBBY",
+    handle: "@RippedRobby",
+    name: "RippedRobby",
+    type: "Comedy & Clips"
+  },
+  {
+    id: "UC_PIXIESGARDEN",
+    handle: "@PixiesGardenReal",
+    name: "PixiesGardenReal",
+    type: "Animals"
+  }
 ];
 
 const resolvedChannels = new Map();
@@ -53,7 +134,9 @@ let comments = null;
 
 async function connectDB() {
   if (!MONGODB_URI) {
-    throw new Error("MONGODB_URI is not set in the server environment.");
+    throw new Error(
+      "MONGODB_URI is not set in the server environment."
+    );
   }
 
   console.log("Connecting to MongoDB...");
@@ -68,7 +151,9 @@ async function connectDB() {
 
   await mongoClient.connect();
 
-  await mongoClient.db("admin").command({ ping: 1 });
+  await mongoClient.db("admin").command({
+    ping: 1
+  });
 
   db = mongoClient.db("perfectube");
 
@@ -77,27 +162,44 @@ async function connectDB() {
   comments = db.collection("comments");
 
   await users.createIndex(
-    { usernameLower: 1 },
-    { unique: true }
+    {
+      usernameLower: 1
+    },
+    {
+      unique: true
+    }
   );
 
   await reactions.createIndex(
-    { userId: 1, videoId: 1 },
-    { unique: true }
+    {
+      userId: 1,
+      videoId: 1
+    },
+    {
+      unique: true
+    }
   );
 
-  await comments.createIndex(
-    { videoId: 1, createdAt: -1 }
-  );
+  await comments.createIndex({
+    videoId: 1,
+    createdAt: -1
+  });
 
   console.log("MongoDB connected successfully.");
 }
 
 function requireDB(res) {
-  if (!db || !users || !reactions || !comments) {
+  if (
+    !db ||
+    !users ||
+    !reactions ||
+    !comments
+  ) {
     res.status(503).json({
-      error: "Online database is temporarily unavailable. The server could not connect to MongoDB."
+      error:
+        "Online database is temporarily unavailable. The server could not connect to MongoDB."
     });
+
     return false;
   }
 
@@ -118,7 +220,8 @@ function makeToken(user) {
 }
 
 function auth(req, res, next) {
-  const header = req.headers.authorization || "";
+  const header =
+    req.headers.authorization || "";
 
   const token = header.startsWith("Bearer ")
     ? header.slice(7)
@@ -131,27 +234,40 @@ function auth(req, res, next) {
   }
 
   try {
-    req.user = jwt.verify(token, JWT_SECRET);
+    req.user = jwt.verify(
+      token,
+      JWT_SECRET
+    );
+
     next();
   } catch {
     return res.status(401).json({
-      error: "Your session expired. Please log in again."
+      error:
+        "Your session expired. Please log in again."
     });
   }
 }
 
 async function youtube(pathname, params = {}) {
   if (!YOUTUBE_API_KEY) {
-    throw new Error("YOUTUBE_API_KEY is missing.");
+    throw new Error(
+      "YOUTUBE_API_KEY is missing."
+    );
   }
 
   const url = new URL(
-    "https://www.googleapis.com/youtube/v3/" + pathname
+    "https://www.googleapis.com/youtube/v3/" +
+      pathname
   );
 
-  url.searchParams.set("key", YOUTUBE_API_KEY);
+  url.searchParams.set(
+    "key",
+    YOUTUBE_API_KEY
+  );
 
-  for (const [key, value] of Object.entries(params)) {
+  for (const [key, value] of Object.entries(
+    params
+  )) {
     url.searchParams.set(key, value);
   }
 
@@ -160,7 +276,8 @@ async function youtube(pathname, params = {}) {
 
   if (!response.ok) {
     throw new Error(
-      data?.error?.message || "YouTube API request failed."
+      data?.error?.message ||
+        "YouTube API request failed."
     );
   }
 
@@ -180,7 +297,9 @@ async function resolveHandle(handle) {
   const item = data.items?.[0];
 
   if (!item) {
-    throw new Error("Could not find " + handle);
+    throw new Error(
+      "Could not find " + handle
+    );
   }
 
   resolvedChannels.set(handle, item);
@@ -189,34 +308,56 @@ async function resolveHandle(handle) {
 }
 
 async function getVideosForChannel(channel) {
-  const real = await resolveHandle(channel.handle);
+  const real = await resolveHandle(
+    channel.handle
+  );
 
   const uploads =
     real.contentDetails.relatedPlaylists.uploads;
 
-  const data = await youtube("playlistItems", {
-    part: "snippet,contentDetails",
-    playlistId: uploads,
-    maxResults: "15"
-  });
+  const data = await youtube(
+    "playlistItems",
+    {
+      part: "snippet,contentDetails",
+      playlistId: uploads,
+      maxResults: "15"
+    }
+  );
 
   return (data.items || []).map(item => ({
     id: item.contentDetails.videoId,
+
     title: item.snippet.title,
-    description: item.snippet.description,
-    publishedAt: item.snippet.publishedAt,
+
+    description:
+      item.snippet.description,
+
+    publishedAt:
+      item.snippet.publishedAt,
+
     channelId: real.id,
-    channelName: real.snippet.title,
-    channelHandle: channel.handle,
-    channelAvatar: real.snippet.thumbnails?.default?.url || "",
+
+    channelName:
+      real.snippet.title,
+
+    channelHandle:
+      channel.handle,
+
+    channelAvatar:
+      real.snippet.thumbnails?.default?.url ||
+      "",
+
     thumbnail:
       "https://i.ytimg.com/vi/" +
       item.contentDetails.videoId +
       "/hqdefault.jpg",
+
     url:
       "https://www.youtube.com/watch?v=" +
       item.contentDetails.videoId,
-    sourceType: channel.type
+
+    sourceType:
+      channel.type
   }));
 }
 
@@ -225,31 +366,42 @@ app.get("/api/config", (req, res) => {
     name: "Perfectube",
     channels: CHANNELS,
     online: Boolean(db),
-    youtubeConfigured: Boolean(YOUTUBE_API_KEY)
+    youtubeConfigured:
+      Boolean(YOUTUBE_API_KEY)
   });
 });
 
 app.get("/api/videos", async (req, res) => {
   try {
-    const wanted = req.query.type || "All";
+    const wanted =
+      req.query.type || "All";
 
-    const selected = CHANNELS.filter(
-      c => wanted === "All" || c.type === wanted
-    );
+    const selected =
+      CHANNELS.filter(
+        c =>
+          wanted === "All" ||
+          c.type === wanted
+      );
 
-    const groups = await Promise.all(
-      selected.map(async c => {
-        try {
-          return await getVideosForChannel(c);
-        } catch (e) {
-          console.error(
-            "YouTube error for " + c.handle + ":",
-            e.message
-          );
-          return [];
-        }
-      })
-    );
+    const groups =
+      await Promise.all(
+        selected.map(async c => {
+          try {
+            return await getVideosForChannel(
+              c
+            );
+          } catch (e) {
+            console.error(
+              "YouTube error for " +
+                c.handle +
+                ":",
+              e.message
+            );
+
+            return [];
+          }
+        })
+      );
 
     const videos = groups
       .flat()
@@ -259,9 +411,14 @@ app.get("/api/videos", async (req, res) => {
           new Date(a.publishedAt)
       );
 
-    res.json({ videos });
+    res.json({
+      videos
+    });
   } catch (e) {
-    console.error("Videos error:", e);
+    console.error(
+      "Videos error:",
+      e
+    );
 
     res.status(500).json({
       error: e.message
@@ -273,16 +430,19 @@ app.get("/api/me", auth, async (req, res) => {
   if (!requireDB(res)) return;
 
   try {
-    const user = await users.findOne(
-      {
-        _id: new ObjectId(req.user.id)
-      },
-      {
-        projection: {
-          passwordHash: 0
+    const user =
+      await users.findOne(
+        {
+          _id: new ObjectId(
+            req.user.id
+          )
+        },
+        {
+          projection: {
+            passwordHash: 0
+          }
         }
-      }
-    );
+      );
 
     if (!user) {
       return res.status(404).json({
@@ -290,12 +450,18 @@ app.get("/api/me", auth, async (req, res) => {
       });
     }
 
-    res.json({ user });
+    res.json({
+      user
+    });
   } catch (e) {
-    console.error("Me error:", e);
+    console.error(
+      "Me error:",
+      e
+    );
 
     res.status(500).json({
-      error: "Could not load your account."
+      error:
+        "Could not load your account."
     });
   }
 });
@@ -308,12 +474,20 @@ app.post(
 
     try {
       const username =
-        String(req.body.username || "").trim();
+        String(
+          req.body.username || ""
+        ).trim();
 
       const password =
-        String(req.body.password || "");
+        String(
+          req.body.password || ""
+        );
 
-      if (!/^[a-zA-Z0-9_]{3,24}$/.test(username)) {
+      if (
+        !/^[a-zA-Z0-9_]{3,24}$/.test(
+          username
+        )
+      ) {
         return res.status(400).json({
           error:
             "Name must be 3-24 characters using letters, numbers or underscores."
@@ -330,18 +504,23 @@ app.post(
       const usernameLower =
         username.toLowerCase();
 
-      if (
+      const existing =
         await users.findOne({
           usernameLower
-        })
-      ) {
+        });
+
+      if (existing) {
         return res.status(409).json({
-          error: "That name is already taken."
+          error:
+            "That name is already taken."
         });
       }
 
       const passwordHash =
-        await bcrypt.hash(password, 12);
+        await bcrypt.hash(
+          password,
+          12
+        );
 
       let avatar = "";
 
@@ -350,7 +529,9 @@ app.post(
           "data:" +
           req.file.mimetype +
           ";base64," +
-          req.file.buffer.toString("base64");
+          req.file.buffer.toString(
+            "base64"
+          );
       }
 
       const user = {
@@ -362,12 +543,16 @@ app.post(
       };
 
       const result =
-        await users.insertOne(user);
+        await users.insertOne(
+          user
+        );
 
-      user._id = result.insertedId;
+      user._id =
+        result.insertedId;
 
       res.json({
         token: makeToken(user),
+
         user: {
           _id: user._id,
           username: user.username,
@@ -375,153 +560,200 @@ app.post(
         }
       });
     } catch (e) {
-      console.error("Signup error:", e);
+      console.error(
+        "Signup error:",
+        e
+      );
 
       if (e?.code === 11000) {
         return res.status(409).json({
-          error: "That name is already taken."
+          error:
+            "That name is already taken."
         });
       }
 
       res.status(500).json({
-        error: "Could not create your account."
+        error:
+          "Could not create your account."
       });
     }
   }
 );
 
-app.post("/api/login", async (req, res) => {
-  if (!requireDB(res)) return;
+app.post(
+  "/api/login",
+  async (req, res) => {
+    if (!requireDB(res)) return;
 
-  try {
-    const username =
-      String(req.body.username || "")
-        .trim()
-        .toLowerCase();
+    try {
+      const username =
+        String(
+          req.body.username || ""
+        )
+          .trim()
+          .toLowerCase();
 
-    const password =
-      String(req.body.password || "");
+      const password =
+        String(
+          req.body.password || ""
+        );
 
-    const user =
-      await users.findOne({
-        usernameLower: username
-      });
+      const user =
+        await users.findOne({
+          usernameLower:
+            username
+        });
 
-    if (
-      !user ||
-      !(await bcrypt.compare(
-        password,
-        user.passwordHash
-      ))
-    ) {
-      return res.status(401).json({
-        error: "Wrong name or password."
-      });
-    }
-
-    res.json({
-      token: makeToken(user),
-      user: {
-        _id: user._id,
-        username: user.username,
-        avatar: user.avatar
+      if (
+        !user ||
+        !(await bcrypt.compare(
+          password,
+          user.passwordHash
+        ))
+      ) {
+        return res.status(401).json({
+          error:
+            "Wrong name or password."
+        });
       }
-    });
-  } catch (e) {
-    console.error("Login error:", e);
 
-    res.status(500).json({
-      error: "Could not log you in."
-    });
-  }
-});
+      res.json({
+        token: makeToken(user),
 
-app.post("/api/reaction", auth, async (req, res) => {
-  if (!requireDB(res)) return;
+        user: {
+          _id: user._id,
+          username: user.username,
+          avatar: user.avatar
+        }
+      });
+    } catch (e) {
+      console.error(
+        "Login error:",
+        e
+      );
 
-  try {
-    const videoId =
-      String(req.body.videoId || "");
-
-    const reaction =
-      String(req.body.reaction || "none");
-
-    if (
-      !videoId ||
-      !["like", "dislike", "none"].includes(reaction)
-    ) {
-      return res.status(400).json({
-        error: "Invalid reaction."
+      res.status(500).json({
+        error:
+          "Could not log you in."
       });
     }
+  }
+);
 
-    const filter = {
-      userId: req.user.id,
-      videoId
-    };
+app.post(
+  "/api/reaction",
+  auth,
+  async (req, res) => {
+    if (!requireDB(res)) return;
 
-    if (reaction === "none") {
-      await reactions.deleteOne(filter);
-    } else {
-      await reactions.updateOne(
-        filter,
-        {
-          $set: {
-            userId: req.user.id,
-            videoId,
-            reaction,
-            updatedAt: new Date()
-          }
-        },
-        {
-          upsert: true
-        }
-      );
-    }
+    try {
+      const videoId =
+        String(
+          req.body.videoId || ""
+        );
 
-    const counts =
-      await reactions
-        .aggregate([
+      const reaction =
+        String(
+          req.body.reaction || "none"
+        );
+
+      if (
+        !videoId ||
+        ![
+          "like",
+          "dislike",
+          "none"
+        ].includes(reaction)
+      ) {
+        return res.status(400).json({
+          error:
+            "Invalid reaction."
+        });
+      }
+
+      const filter = {
+        userId: req.user.id,
+        videoId
+      };
+
+      if (
+        reaction === "none"
+      ) {
+        await reactions.deleteOne(
+          filter
+        );
+      } else {
+        await reactions.updateOne(
+          filter,
           {
-            $match: {
-              videoId
+            $set: {
+              userId:
+                req.user.id,
+              videoId,
+              reaction,
+              updatedAt:
+                new Date()
             }
           },
           {
-            $group: {
-              _id: "$reaction",
-              count: {
-                $sum: 1
+            upsert: true
+          }
+        );
+      }
+
+      const counts =
+        await reactions
+          .aggregate([
+            {
+              $match: {
+                videoId
+              }
+            },
+            {
+              $group: {
+                _id: "$reaction",
+                count: {
+                  $sum: 1
+                }
               }
             }
-          }
-        ])
-        .toArray();
+          ])
+          .toArray();
 
-    const result = {
-      like: 0,
-      dislike: 0
-    };
+      const result = {
+        like: 0,
+        dislike: 0
+      };
 
-    counts.forEach(x => {
-      result[x._id] = x.count;
-    });
+      counts.forEach(x => {
+        result[x._id] =
+          x.count;
+      });
 
-    const mine =
-      await reactions.findOne(filter);
+      const mine =
+        await reactions.findOne(
+          filter
+        );
 
-    res.json({
-      ...result,
-      mine: mine?.reaction || "none"
-    });
-  } catch (e) {
-    console.error("Reaction error:", e);
+      res.json({
+        ...result,
+        mine:
+          mine?.reaction ||
+          "none"
+      });
+    } catch (e) {
+      console.error(
+        "Reaction error:",
+        e
+      );
 
-    res.status(500).json({
-      error: "Could not save reaction."
-    });
+      res.status(500).json({
+        error:
+          "Could not save reaction."
+      });
+    }
   }
-});
+);
 
 app.get(
   "/api/reactions/:videoId",
@@ -529,7 +761,8 @@ app.get(
     if (!requireDB(res)) return;
 
     try {
-      const videoId = req.params.videoId;
+      const videoId =
+        req.params.videoId;
 
       const counts =
         await reactions
@@ -557,13 +790,19 @@ app.get(
       };
 
       counts.forEach(x => {
-        result[x._id] = x.count;
+        result[x._id] =
+          x.count;
       });
 
       const header =
-        req.headers.authorization || "";
+        req.headers.authorization ||
+        "";
 
-      if (header.startsWith("Bearer ")) {
+      if (
+        header.startsWith(
+          "Bearer "
+        )
+      ) {
         try {
           const payload =
             jwt.verify(
@@ -573,12 +812,14 @@ app.get(
 
           const mine =
             await reactions.findOne({
-              userId: payload.id,
+              userId:
+                payload.id,
               videoId
             });
 
           if (mine) {
-            result.mine = mine.reaction;
+            result.mine =
+              mine.reaction;
           }
         } catch {}
       }
@@ -591,7 +832,8 @@ app.get(
       );
 
       res.status(500).json({
-        error: "Could not load reactions."
+        error:
+          "Could not load reactions."
       });
     }
   }
@@ -606,7 +848,8 @@ app.get(
       const rows =
         await comments
           .find({
-            videoId: req.params.videoId
+            videoId:
+              req.params.videoId
           })
           .sort({
             createdAt: -1
@@ -617,10 +860,14 @@ app.get(
       res.json({
         comments: rows.map(c => ({
           id: String(c._id),
-          username: c.username,
-          avatar: c.avatar,
-          text: c.text,
-          createdAt: c.createdAt
+          username:
+            c.username,
+          avatar:
+            c.avatar,
+          text:
+            c.text,
+          createdAt:
+            c.createdAt
         }))
       });
     } catch (e) {
@@ -630,7 +877,8 @@ app.get(
       );
 
       res.status(500).json({
-        error: "Could not load comments."
+        error:
+          "Could not load comments."
       });
     }
   }
@@ -644,14 +892,22 @@ app.post(
 
     try {
       const videoId =
-        String(req.body.videoId || "");
+        String(
+          req.body.videoId || ""
+        );
 
       const text =
-        String(req.body.text || "").trim();
+        String(
+          req.body.text || ""
+        ).trim();
 
-      if (!videoId || !text) {
+      if (
+        !videoId ||
+        !text
+      ) {
         return res.status(400).json({
-          error: "Comment cannot be empty."
+          error:
+            "Comment cannot be empty."
         });
       }
 
@@ -664,34 +920,49 @@ app.post(
 
       const user =
         await users.findOne({
-          _id: new ObjectId(req.user.id)
+          _id: new ObjectId(
+            req.user.id
+          )
         });
 
       if (!user) {
         return res.status(404).json({
-          error: "User not found."
+          error:
+            "User not found."
         });
       }
 
       const doc = {
         videoId,
-        userId: req.user.id,
-        username: user.username,
-        avatar: user.avatar,
+        userId:
+          req.user.id,
+        username:
+          user.username,
+        avatar:
+          user.avatar,
         text,
-        createdAt: new Date()
+        createdAt:
+          new Date()
       };
 
       const result =
-        await comments.insertOne(doc);
+        await comments.insertOne(
+          doc
+        );
 
       res.json({
         comment: {
-          id: String(result.insertedId),
-          username: doc.username,
-          avatar: doc.avatar,
-          text: doc.text,
-          createdAt: doc.createdAt
+          id: String(
+            result.insertedId
+          ),
+          username:
+            doc.username,
+          avatar:
+            doc.avatar,
+          text:
+            doc.text,
+          createdAt:
+            doc.createdAt
         }
       });
     } catch (e) {
@@ -701,57 +972,83 @@ app.post(
       );
 
       res.status(500).json({
-        error: "Could not post comment."
+        error:
+          "Could not post comment."
       });
     }
   }
 );
 
-app.use((err, req, res, next) => {
-  console.error("Server error:", err);
+app.use(
+  (
+    err,
+    req,
+    res,
+    next
+  ) => {
+    console.error(
+      "Server error:",
+      err
+    );
 
-  if (err?.code === "LIMIT_FILE_SIZE") {
-    return res.status(400).json({
+    if (
+      err?.code ===
+      "LIMIT_FILE_SIZE"
+    ) {
+      return res.status(400).json({
+        error:
+          "Avatar file is too large. Maximum size is 1 MB."
+      });
+    }
+
+    if (
+      err?.message ===
+      "Request aborted"
+    ) {
+      return;
+    }
+
+    if (res.headersSent) {
+      return next(err);
+    }
+
+    res.status(500).json({
       error:
-        "Avatar file is too large. Maximum size is 1 MB."
+        "An unexpected server error occurred."
     });
   }
+);
 
-  if (err?.message === "Request aborted") {
-    return;
+app.get(
+  "*splat",
+  (req, res) => {
+    res.sendFile(
+      path.join(
+        __dirname,
+        "public",
+        "index.html"
+      )
+    );
   }
-
-  if (res.headersSent) {
-    return next(err);
-  }
-
-  res.status(500).json({
-    error: "An unexpected server error occurred."
-  });
-});
-
-app.get("*splat", (req, res) => {
-  res.sendFile(
-    path.join(
-      __dirname,
-      "public",
-      "index.html"
-    )
-  );
-});
+);
 
 async function startServer() {
   try {
     await connectDB();
 
-    app.listen(PORT, () => {
-      console.log(
-        "Perfectube running on port " + PORT
-      );
-      console.log(
-        "Database status: CONNECTED"
-      );
-    });
+    app.listen(
+      PORT,
+      () => {
+        console.log(
+          "Perfectube running on port " +
+            PORT
+        );
+
+        console.log(
+          "Database status: CONNECTED"
+        );
+      }
+    );
   } catch (err) {
     console.error(
       "MongoDB connection failed:"
@@ -761,15 +1058,17 @@ async function startServer() {
       err?.message || err
     );
 
-    app.listen(PORT, () => {
-      console.log(
-        "Perfectube running on port " +
-        PORT +
-        " without database"
-      );
-    });
+    app.listen(
+      PORT,
+      () => {
+        console.log(
+          "Perfectube running on port " +
+            PORT +
+            " without database"
+        );
+      }
+    );
   }
 }
 
 startServer();
-```
