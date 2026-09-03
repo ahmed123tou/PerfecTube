@@ -1,7 +1,8 @@
 /* =========================================================
    PERFECTUBE — FULL APP.JS
-   Shorts feed + infinite scroll + comments + replies +
-   comment likes + emojis + video reactions + auth
+   Fixed API compatibility + Shorts + infinite scroll +
+   comments + replies + comment likes + emojis +
+   video reactions + auth
 ========================================================= */
 
 const $ = s => document.querySelector(s);
@@ -17,12 +18,12 @@ const EMOJIS = [
   "👍","👎","🙏","🤯","😳","🤔","😴","🥶","🥳","🤡","👑","💥",
   "😀","😃","😄","😁","😆","😅","🤣","😊","🙂","🙃","😉","😌",
   "😍","🥰","😘","😗","😙","😚","😋","😛","😝","😜","🤪","🤩",
-  "🥲","😏","😒","🙄","😬","🤐","🤔","😐","😑","😶","🙃","😮",
-  "😲","😴","🤤","😪","😵","🤐","🥺","😤","😡","🤬","😱","😨",
+  "🥲","😏","😒","🙄","😬","🤐","😐","😑","😶","😮","😲","🤤",
+  "😪","😵","🥺","😤","😡","🤬","😱","😨",
   "👏","🙌","🫶","🤝","💪","✌️","🤞","🤟","👌","🫡","👋","🖐️",
-  "🎯","🎬","📱","💻","🔥","⚡","🌟","🌈","☀️","🌙","☁️","❄️",
+  "🎯","🎬","📱","💻","⚡","🌟","🌈","☀️","🌙","☁️","❄️",
   "🍔","🍟","🌭","🍿","🍩","🍪","🍰","🎂","🍎","🍌","🍉","🍓",
-  "⚽","🏀","🏈","⚾","🎾","🏆","🥇","🥈","🥉","🎮","🕹️","🎧"
+  "⚽","🏀","🏈","⚾","🎾","🥇","🥈","🥉","🕹️","🎧"
 ];
 
 /* =========================================================
@@ -36,17 +37,14 @@ let currentVideo = null;
 let currentType = "All";
 let currentPage = "home";
 
-let token = localStorage.getItem("perfectube_token") || "";
-let user = null;
+let token =
+  localStorage.getItem("perfectube_token") || "";
 
+let user = null;
 let authMode = "signup";
 
 let shortsIndex = 0;
 let shortsLoading = false;
-let shortsInitialized = false;
-
-let commentReplyId = null;
-let openCommentEmojiPicker = false;
 
 let searchTimer = null;
 
@@ -91,14 +89,28 @@ function esc(value = "") {
 ========================================================= */
 
 function timeAgo(date) {
+  if (!date) return "";
+
+  const time = new Date(date).getTime();
+
+  if (Number.isNaN(time)) {
+    return "";
+  }
+
   const sec = Math.floor(
-    (Date.now() - new Date(date)) / 1000
+    (Date.now() - time) / 1000
   );
 
   if (sec < 60) return "just now";
-  if (sec < 3600) return `${Math.floor(sec / 60)}m ago`;
-  if (sec < 86400) return `${Math.floor(sec / 3600)}h ago`;
-  if (sec < 2592000) return `${Math.floor(sec / 86400)}d ago`;
+  if (sec < 3600) {
+    return `${Math.floor(sec / 60)}m ago`;
+  }
+  if (sec < 86400) {
+    return `${Math.floor(sec / 3600)}h ago`;
+  }
+  if (sec < 2592000) {
+    return `${Math.floor(sec / 86400)}d ago`;
+  }
 
   return new Date(date).toLocaleDateString();
 }
@@ -120,12 +132,13 @@ function defaultAvatar(name) {
 ========================================================= */
 
 async function api(url, options = {}) {
-  const headers = options.headers
-    ? { ...options.headers }
-    : {};
+  const headers = {
+    ...(options.headers || {})
+  };
 
   if (token) {
-    headers.Authorization = `Bearer ${token}`;
+    headers.Authorization =
+      `Bearer ${token}`;
   }
 
   const response = await fetch(url, {
@@ -133,17 +146,81 @@ async function api(url, options = {}) {
     headers
   });
 
-  const data = await response
-    .json()
-    .catch(() => ({}));
+  const text = await response.text();
+
+  let data = {};
+
+  try {
+    data = text ? JSON.parse(text) : {};
+  } catch {
+    data = {};
+  }
 
   if (!response.ok) {
     throw new Error(
-      data.error || "Something went wrong."
+      data.error ||
+      `Request failed (${response.status})`
     );
   }
 
   return data;
+}
+
+/* =========================================================
+   NORMALIZE VIDEO RESPONSE
+========================================================= */
+
+function normalizeVideosResponse(data) {
+  /*
+    Server currently returns:
+
+      [
+        {...},
+        {...}
+      ]
+
+    Older frontend expected:
+
+      {
+        videos: [...]
+      }
+
+    Support both.
+  */
+
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.videos)) {
+    return data.videos;
+  }
+
+  if (Array.isArray(data?.items)) {
+    return data.items;
+  }
+
+  return [];
+}
+
+/* =========================================================
+   NORMALIZE COMMENTS RESPONSE
+========================================================= */
+
+function normalizeCommentsResponse(data) {
+  if (Array.isArray(data)) {
+    return data;
+  }
+
+  if (Array.isArray(data?.comments)) {
+    return data.comments;
+  }
+
+  if (Array.isArray(data?.items)) {
+    return data.items;
+  }
+
+  return [];
 }
 
 /* =========================================================
@@ -158,7 +235,8 @@ function setAccount() {
     $("#account")?.classList.remove("hidden");
 
     if ($("#accountName")) {
-      $("#accountName").textContent = user.username;
+      $("#accountName").textContent =
+        user.username;
     }
 
     if ($("#accountAvatar")) {
@@ -183,7 +261,16 @@ async function loadMe() {
   try {
     const data = await api("/api/me");
 
-    user = data.user;
+    if (data.loggedIn && data.user) {
+      user = data.user;
+    } else {
+      token = "";
+      user = null;
+
+      localStorage.removeItem(
+        "perfectube_token"
+      );
+    }
 
     setAccount();
   } catch {
@@ -204,30 +291,44 @@ async function loadMe() {
 
 async function loadVideos() {
   $("#loading")?.classList.remove("hidden");
+  $("#empty")?.classList.add("hidden");
 
   if ($("#videoGrid")) {
     $("#videoGrid").innerHTML = "";
   }
 
-  $("#empty")?.classList.add("hidden");
-
   try {
     const data = await api(
-      `/api/videos?type=${encodeURIComponent(currentType)}`
+      `/api/videos?type=${encodeURIComponent(
+        currentType
+      )}`
     );
 
-    videos = data.videos || [];
+    videos = normalizeVideosResponse(data);
 
     renderVideos();
+    renderChannels();
 
     if (currentPage === "shorts") {
       prepareShorts();
     }
   } catch (e) {
+    videos = [];
+
     if ($("#videoGrid")) {
       $("#videoGrid").innerHTML = `
         <div class="empty">
           Could not load videos.
+          <br>
+          <small>${esc(e.message)}</small>
+        </div>
+      `;
+    }
+
+    if ($("#shortsFeed")) {
+      $("#shortsFeed").innerHTML = `
+        <div class="empty">
+          Could not load Shorts.
           <br>
           <small>${esc(e.message)}</small>
         </div>
@@ -239,29 +340,78 @@ async function loadVideos() {
 }
 
 /* =========================================================
+   VIDEO HELPERS
+========================================================= */
+
+function getVideoTitle(video) {
+  return (
+    video.title ||
+    "Untitled video"
+  );
+}
+
+function getChannelName(video) {
+  return (
+    video.channelName ||
+    video.channelTitle ||
+    video.channel?.name ||
+    "Unknown channel"
+  );
+}
+
+function getVideoUrl(video) {
+  return (
+    video.url ||
+    `https://www.youtube.com/watch?v=${encodeURIComponent(
+      video.id
+    )}`
+  );
+}
+
+function getEmbedUrl(video) {
+  if (video.embedUrl) {
+    return video.embedUrl;
+  }
+
+  return (
+    `https://www.youtube.com/embed/` +
+    `${encodeURIComponent(video.id)}` +
+    `?autoplay=1&rel=0&playsinline=1`
+  );
+}
+
+/* =========================================================
    NORMAL VIDEO GRID
 ========================================================= */
 
 function renderVideos() {
   if (!$("#videoGrid")) return;
 
-  let list = videos;
+  let list = [...videos];
 
   const search =
-    $("#search")?.value.trim().toLowerCase() || "";
+    $("#search")?.value.trim().toLowerCase() ||
+    "";
 
   if (search) {
-    list = list.filter(v =>
-      String(v.title || "")
-        .toLowerCase()
-        .includes(search) ||
-      String(v.channelName || "")
-        .toLowerCase()
-        .includes(search) ||
-      String(v.sourceType || "")
-        .toLowerCase()
-        .includes(search)
-    );
+    list = list.filter(video => {
+      const title =
+        getVideoTitle(video).toLowerCase();
+
+      const channel =
+        getChannelName(video).toLowerCase();
+
+      const source =
+        String(
+          video.sourceType || ""
+        ).toLowerCase();
+
+      return (
+        title.includes(search) ||
+        channel.includes(search) ||
+        source.includes(search)
+      );
+    });
   }
 
   $("#empty")?.classList.toggle(
@@ -269,43 +419,77 @@ function renderVideos() {
     list.length !== 0
   );
 
-  $("#videoGrid").innerHTML = list.map(v => `
-    <article
-      class="video"
-      data-video="${esc(v.id)}"
-    >
-      <div class="thumb">
-        <img
-          src="${esc(v.thumbnail)}"
-          loading="lazy"
-          alt=""
+  if (!list.length) {
+    $("#videoGrid").innerHTML = "";
+    return;
+  }
+
+  $("#videoGrid").innerHTML =
+    list.map(video => {
+      const title =
+        getVideoTitle(video);
+
+      const channel =
+        getChannelName(video);
+
+      const thumbnail =
+        video.thumbnail ||
+        video.thumbnails?.high?.url ||
+        video.thumbnails?.medium?.url ||
+        video.thumbnails?.default?.url ||
+        "";
+
+      const source =
+        video.sourceType ||
+        "YouTube";
+
+      return `
+        <article
+          class="video"
+          data-video="${esc(video.id)}"
         >
+          <div class="thumb">
 
-        <span class="badge">
-          ${esc(v.sourceType)}
-        </span>
-      </div>
+            <img
+              src="${esc(thumbnail)}"
+              loading="lazy"
+              alt=""
+            >
 
-      <div class="videoBody">
-        <div class="videoTitle">
-          ${esc(v.title)}
-        </div>
+            <span class="badge">
+              ${esc(source)}
+            </span>
 
-        <div class="channel">
-          ${esc(v.channelName)}
-        </div>
+          </div>
 
-        <div class="date">
-          ${timeAgo(v.publishedAt)}
-        </div>
-      </div>
-    </article>
-  `).join("");
+          <div class="videoBody">
+
+            <div class="videoTitle">
+              ${esc(title)}
+            </div>
+
+            <div class="channel">
+              ${esc(channel)}
+            </div>
+
+            <div class="date">
+              ${timeAgo(video.publishedAt)}
+            </div>
+
+          </div>
+        </article>
+      `;
+    }).join("");
 
   $$(".video").forEach(card => {
-    card.addEventListener("click", () => {
-      openVideo(card.dataset.video);
-    });
+    card.addEventListener(
+      "click",
+      () => {
+        openVideo(
+          card.dataset.video
+        );
+      }
+    );
   });
 }
 
@@ -315,32 +499,51 @@ function renderVideos() {
 
 async function openVideo(id) {
   currentVideo =
-    videos.find(v => String(v.id) === String(id));
+    videos.find(
+      video =>
+        String(video.id) ===
+        String(id)
+    );
 
-  if (!currentVideo) return;
+  if (!currentVideo) {
+    /*
+      Also allow opening a Shorts video
+      that was loaded after the original
+      video array.
+    */
+    currentVideo =
+      shortsVideos.find(
+        video =>
+          String(video.id) ===
+          String(id)
+      );
+  }
+
+  if (!currentVideo) {
+    toast("Video not found.");
+    return;
+  }
 
   const player = $("#player");
 
   if (player) {
     player.src =
-      `https://www.youtube.com/embed/${encodeURIComponent(
-        currentVideo.id
-      )}?autoplay=1&rel=0`;
+      getEmbedUrl(currentVideo);
   }
 
   if ($("#videoTitle")) {
     $("#videoTitle").textContent =
-      currentVideo.title;
+      getVideoTitle(currentVideo);
   }
 
   if ($("#videoChannel")) {
     $("#videoChannel").textContent =
-      currentVideo.channelName;
+      getChannelName(currentVideo);
   }
 
   if ($("#youtubeBtn")) {
     $("#youtubeBtn").href =
-      currentVideo.url;
+      getVideoUrl(currentVideo);
   }
 
   $("#videoModal")?.classList.remove(
@@ -367,32 +570,56 @@ async function loadReaction() {
       )}`
     );
 
+    const likes =
+      Number(
+        data.likes ??
+        data.like ??
+        0
+      );
+
+    const dislikes =
+      Number(
+        data.dislikes ??
+        data.dislike ??
+        0
+      );
+
+    const reaction =
+      Number(
+        data.userReaction ??
+        0
+      );
+
     if ($("#likeCount")) {
       $("#likeCount").textContent =
-        data.like || 0;
+        likes;
     }
 
     if ($("#dislikeCount")) {
       $("#dislikeCount").textContent =
-        data.dislike || 0;
+        dislikes;
     }
 
     $("#likeBtn")?.classList.toggle(
       "selected",
+      reaction === 1 ||
       data.mine === "like"
     );
 
     $("#dislikeBtn")?.classList.toggle(
       "selected",
+      reaction === -1 ||
       data.mine === "dislike"
     );
   } catch {
     if ($("#likeCount")) {
-      $("#likeCount").textContent = 0;
+      $("#likeCount").textContent =
+        0;
     }
 
     if ($("#dislikeCount")) {
-      $("#dislikeCount").textContent = 0;
+      $("#dislikeCount").textContent =
+        0;
     }
   }
 }
@@ -406,16 +633,32 @@ async function react(type) {
   }
 
   try {
-    await api("/api/reaction", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        videoId: currentVideo.id,
-        reaction: type
-      })
-    });
+    await api(
+      "/api/reaction",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+          videoId:
+            currentVideo.id,
+
+          /*
+            IMPORTANT:
+            server.js expects "value",
+            not "reaction".
+          */
+          value:
+            type === "like"
+              ? 1
+              : -1
+        })
+      }
+    );
 
     await loadReaction();
   } catch (e) {
@@ -437,7 +680,8 @@ async function loadComments() {
       )}`
     );
 
-    const list = data.comments || [];
+    const list =
+      normalizeCommentsResponse(data);
 
     if ($("#commentCount")) {
       $("#commentCount").textContent =
@@ -464,21 +708,53 @@ function buildCommentTree(comments) {
   const map = new Map();
 
   comments.forEach(comment => {
-    map.set(String(comment.id), {
-      ...comment,
-      replies: []
-    });
+    const id =
+      comment.id ||
+      comment._id;
+
+    if (!id) return;
+
+    map.set(
+      String(id),
+      {
+        ...comment,
+
+        id: String(id),
+
+        username:
+          comment.username ||
+          comment.user?.username ||
+          "Unknown",
+
+        avatar:
+          comment.avatar ||
+          comment.user?.avatar ||
+          null,
+
+        replies: []
+      }
+    );
   });
 
   const roots = [];
 
   comments.forEach(comment => {
+    const id =
+      comment.id ||
+      comment._id;
+
+    if (!id) return;
+
     const node =
-      map.get(String(comment.id));
+      map.get(String(id));
+
+    if (!node) return;
 
     if (
       comment.parentId &&
-      map.has(String(comment.parentId))
+      map.has(
+        String(comment.parentId)
+      )
     ) {
       map
         .get(String(comment.parentId))
@@ -509,12 +785,18 @@ function renderComments(list) {
     return;
   }
 
-  const tree = buildCommentTree(list);
+  const tree =
+    buildCommentTree(list);
 
   $("#commentList").innerHTML =
-    tree.map(comment =>
-      renderComment(comment, 0)
-    ).join("");
+    tree
+      .map(comment =>
+        renderComment(
+          comment,
+          0
+        )
+      )
+      .join("");
 
   bindCommentButtons();
 }
@@ -523,15 +805,28 @@ function renderComments(list) {
    SINGLE COMMENT
 ========================================================= */
 
-function renderComment(comment, depth = 0) {
+function renderComment(
+  comment,
+  depth = 0
+) {
   const avatar =
     comment.avatar ||
-    defaultAvatar(comment.username);
+    defaultAvatar(
+      comment.username
+    );
 
   const likeCount =
-    Number(comment.likeCount || 0);
+    Number(
+      comment.likeCount ??
+      comment.likes ??
+      0
+    );
 
   const mine =
+    Number(
+      comment.userReaction ??
+      0
+    ) === 1 ||
     Boolean(comment.mineLike);
 
   const replies =
@@ -546,6 +841,7 @@ function renderComment(comment, depth = 0) {
         5
       )}"
     >
+
       <img
         class="avatar"
         src="${esc(avatar)}"
@@ -553,29 +849,46 @@ function renderComment(comment, depth = 0) {
       >
 
       <div class="commentContent">
+
         <div class="commentTop">
+
           <strong>
-            ${esc(comment.username)}
+            ${esc(
+              comment.username ||
+              "Unknown"
+            )}
           </strong>
 
           <span class="commentDate">
-            ${comment.createdAt
-              ? timeAgo(comment.createdAt)
-              : ""}
+            ${
+              comment.createdAt
+                ? timeAgo(
+                    comment.createdAt
+                  )
+                : ""
+            }
           </span>
+
         </div>
 
         <p class="commentText">
-          ${formatEmojiText(comment.text)}
+          ${formatEmojiText(
+            comment.text || ""
+          )}
         </p>
 
         <div class="commentActions">
 
           <button
+            type="button"
             class="commentLikeBtn ${
-              mine ? "selected" : ""
+              mine
+                ? "selected"
+                : ""
             }"
-            data-comment-like="${esc(comment.id)}"
+            data-comment-like="${esc(
+              comment.id
+            )}"
           >
             ❤️
             <span>
@@ -584,15 +897,21 @@ function renderComment(comment, depth = 0) {
           </button>
 
           <button
+            type="button"
             class="commentReplyBtn"
-            data-comment-reply="${esc(comment.id)}"
+            data-comment-reply="${esc(
+              comment.id
+            )}"
           >
             ↩ Reply
           </button>
 
           <button
+            type="button"
             class="commentEmojiBtn"
-            data-comment-emoji="${esc(comment.id)}"
+            data-comment-emoji="${esc(
+              comment.id
+            )}"
           >
             😀
           </button>
@@ -601,17 +920,24 @@ function renderComment(comment, depth = 0) {
 
         <div
           class="commentReplyBox hidden"
-          id="replyBox-${esc(comment.id)}"
+          id="replyBox-${esc(
+            comment.id
+          )}"
         >
+
           <form
             class="replyForm"
-            data-parent="${esc(comment.id)}"
+            data-parent="${esc(
+              comment.id
+            )}"
           >
+
             <input
               class="replyInput"
               maxlength="500"
               placeholder="Reply to ${esc(
-                comment.username
+                comment.username ||
+                "this comment"
               )}..."
             >
 
@@ -621,32 +947,41 @@ function renderComment(comment, depth = 0) {
             >
               Reply
             </button>
+
           </form>
+
         </div>
 
         <div
           class="commentEmojiPicker hidden"
-          id="commentEmoji-${esc(comment.id)}"
+          id="commentEmoji-${esc(
+            comment.id
+          )}"
         >
-          ${renderMiniEmojiPicker(comment.id)}
+          ${renderMiniEmojiPicker(
+            comment.id
+          )}
         </div>
 
         ${
           replies.length
             ? `
               <div class="commentReplies">
-                ${replies.map(reply =>
-                  renderComment(
-                    reply,
-                    depth + 1
+                ${replies
+                  .map(reply =>
+                    renderComment(
+                      reply,
+                      depth + 1
+                    )
                   )
-                ).join("")}
+                  .join("")}
               </div>
             `
             : ""
         }
 
       </div>
+
     </div>
   `;
 }
@@ -666,21 +1001,27 @@ function formatEmojiText(text = "") {
    MINI EMOJI PICKER
 ========================================================= */
 
-function renderMiniEmojiPicker(commentId) {
+function renderMiniEmojiPicker(
+  commentId
+) {
   return `
     <div class="miniEmojiGrid">
-      ${EMOJIS.map(emoji => `
-        <button
-          type="button"
-          class="miniEmoji"
-          data-emoji-target="${esc(
-            commentId
-          )}"
-          data-emoji="${emoji}"
-        >
-          ${emoji}
-        </button>
-      `).join("")}
+
+      ${EMOJIS.map(
+        emoji => `
+          <button
+            type="button"
+            class="miniEmoji"
+            data-emoji-target="${esc(
+              commentId
+            )}"
+            data-emoji="${emoji}"
+          >
+            ${emoji}
+          </button>
+        `
+      ).join("")}
+
     </div>
   `;
 }
@@ -696,7 +1037,8 @@ function bindCommentButtons() {
         "click",
         () => {
           likeComment(
-            button.dataset.commentLike
+            button.dataset
+              .commentLike
           );
         }
       );
@@ -709,7 +1051,8 @@ function bindCommentButtons() {
         "click",
         () => {
           toggleReplyBox(
-            button.dataset.commentReply
+            button.dataset
+              .commentReply
           );
         }
       );
@@ -720,29 +1063,38 @@ function bindCommentButtons() {
     button => {
       button.addEventListener(
         "click",
-        () => {
+        event => {
+          event.stopPropagation();
+
           toggleCommentEmojiPicker(
-            button.dataset.commentEmoji
+            button.dataset
+              .commentEmoji
           );
         }
       );
     }
   );
 
-  $$(".replyForm").forEach(form => {
-    form.addEventListener(
-      "submit",
-      postReply
-    );
-  });
+  $$(".replyForm").forEach(
+    form => {
+      form.addEventListener(
+        "submit",
+        postReply
+      );
+    }
+  );
 
   $$("[data-emoji-target]").forEach(
     button => {
       button.addEventListener(
         "click",
-        () => {
+        event => {
+          event.stopPropagation();
+
           insertReplyEmoji(
-            button.dataset.emojiTarget,
+            button.dataset
+              .emojiTarget,
+
             button.dataset.emoji
           );
         }
@@ -755,23 +1107,36 @@ function bindCommentButtons() {
    LIKE COMMENT
 ========================================================= */
 
-async function likeComment(commentId) {
+async function likeComment(
+  commentId
+) {
   if (!token) {
     openAuth("login");
     return;
   }
 
   try {
-    await api("/api/comment-reaction", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        commentId,
-        reaction: "like"
-      })
-    });
+    /*
+      Server expects "value".
+    */
+
+    await api(
+      "/api/comment-reaction",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+          commentId,
+
+          value: 1
+        })
+      }
+    );
 
     await loadComments();
   } catch (e) {
@@ -783,23 +1148,37 @@ async function likeComment(commentId) {
    REPLY BOX
 ========================================================= */
 
-function toggleReplyBox(commentId) {
+function toggleReplyBox(
+  commentId
+) {
   const box =
-    $(`#replyBox-${CSS.escape(commentId)}`);
+    $(
+      `#replyBox-${CSS.escape(
+        commentId
+      )}`
+    );
 
   if (!box) return;
 
   $$(".commentReplyBox").forEach(
     other => {
       if (other !== box) {
-        other.classList.add("hidden");
+        other.classList.add(
+          "hidden"
+        );
       }
     }
   );
 
-  box.classList.toggle("hidden");
+  box.classList.toggle(
+    "hidden"
+  );
 
-  if (!box.classList.contains("hidden")) {
+  if (
+    !box.classList.contains(
+      "hidden"
+    )
+  ) {
     box
       .querySelector("input")
       ?.focus();
@@ -810,7 +1189,9 @@ function toggleReplyBox(commentId) {
    REPLY
 ========================================================= */
 
-async function postReply(event) {
+async function postReply(
+  event
+) {
   event.preventDefault();
 
   if (!token) {
@@ -818,33 +1199,47 @@ async function postReply(event) {
     return;
   }
 
-  const form = event.currentTarget;
+  if (!currentVideo) return;
+
+  const form =
+    event.currentTarget;
 
   const parentId =
     form.dataset.parent;
 
   const input =
-    form.querySelector(".replyInput");
+    form.querySelector(
+      ".replyInput"
+    );
+
+  if (!input) return;
 
   const text =
     input.value.trim();
 
   if (!text) return;
 
-  if (!currentVideo) return;
-
   try {
-    await api("/api/comments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        videoId: currentVideo.id,
-        text,
-        parentId
-      })
-    });
+    await api(
+      "/api/comments",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+          videoId:
+            currentVideo.id,
+
+          text,
+
+          parentId
+        })
+      }
+    );
 
     input.value = "";
 
@@ -862,19 +1257,27 @@ function toggleCommentEmojiPicker(
   commentId
 ) {
   const picker =
-    $(`#commentEmoji-${CSS.escape(commentId)}`);
+    $(
+      `#commentEmoji-${CSS.escape(
+        commentId
+      )}`
+    );
 
   if (!picker) return;
 
   $$(".commentEmojiPicker").forEach(
     other => {
       if (other !== picker) {
-        other.classList.add("hidden");
+        other.classList.add(
+          "hidden"
+        );
       }
     }
   );
 
-  picker.classList.toggle("hidden");
+  picker.classList.toggle(
+    "hidden"
+  );
 }
 
 function insertReplyEmoji(
@@ -882,12 +1285,18 @@ function insertReplyEmoji(
   emoji
 ) {
   const box =
-    $(`#replyBox-${CSS.escape(commentId)}`);
+    $(
+      `#replyBox-${CSS.escape(
+        commentId
+      )}`
+    );
 
   if (!box) return;
 
   const input =
-    box.querySelector(".replyInput");
+    box.querySelector(
+      ".replyInput"
+    );
 
   if (!input) return;
 
@@ -901,10 +1310,15 @@ function insertReplyEmoji(
 ========================================================= */
 
 function setupCommentEmojiPicker() {
-  const button = $("#commentEmojiOpen");
-  const picker = $("#commentEmojiPicker");
+  const button =
+    $("#commentEmojiOpen");
 
-  if (!button || !picker) return;
+  const picker =
+    $("#commentEmojiPicker");
+
+  if (!button || !picker) {
+    return;
+  }
 
   picker.innerHTML =
     renderMainEmojiPicker();
@@ -913,6 +1327,7 @@ function setupCommentEmojiPicker() {
     "click",
     event => {
       event.preventDefault();
+      event.stopPropagation();
 
       picker.classList.toggle(
         "hidden"
@@ -931,7 +1346,8 @@ function setupCommentEmojiPicker() {
       if (!emojiButton) return;
 
       insertMainCommentEmoji(
-        emojiButton.dataset.mainEmoji
+        emojiButton.dataset
+          .mainEmoji
       );
     }
   );
@@ -940,14 +1356,18 @@ function setupCommentEmojiPicker() {
 function renderMainEmojiPicker() {
   return `
     <div class="mainEmojiGrid">
-      ${EMOJIS.map(emoji => `
-        <button
-          type="button"
-          data-main-emoji="${emoji}"
-        >
-          ${emoji}
-        </button>
-      `).join("")}
+
+      ${EMOJIS.map(
+        emoji => `
+          <button
+            type="button"
+            data-main-emoji="${emoji}"
+          >
+            ${emoji}
+          </button>
+        `
+      ).join("")}
+
     </div>
   `;
 }
@@ -955,7 +1375,8 @@ function renderMainEmojiPicker() {
 function insertMainCommentEmoji(
   emoji
 ) {
-  const input = $("#commentText");
+  const input =
+    $("#commentText");
 
   if (!input) return;
 
@@ -968,7 +1389,10 @@ function insertMainCommentEmoji(
     input.value.length;
 
   input.value =
-    input.value.slice(0, start) +
+    input.value.slice(
+      0,
+      start
+    ) +
     emoji +
     input.value.slice(end);
 
@@ -987,7 +1411,9 @@ function insertMainCommentEmoji(
    POST MAIN COMMENT
 ========================================================= */
 
-async function postComment(event) {
+async function postComment(
+  event
+) {
   event.preventDefault();
 
   if (!token) {
@@ -997,7 +1423,8 @@ async function postComment(event) {
 
   if (!currentVideo) return;
 
-  const input = $("#commentText");
+  const input =
+    $("#commentText");
 
   if (!input) return;
 
@@ -1007,21 +1434,31 @@ async function postComment(event) {
   if (!text) return;
 
   try {
-    await api("/api/comments", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        videoId: currentVideo.id,
-        text
-      })
-    });
+    await api(
+      "/api/comments",
+      {
+        method: "POST",
+
+        headers: {
+          "Content-Type":
+            "application/json"
+        },
+
+        body: JSON.stringify({
+          videoId:
+            currentVideo.id,
+
+          text
+        })
+      }
+    );
 
     input.value = "";
 
     $("#commentEmojiPicker")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
 
     await loadComments();
   } catch (e) {
@@ -1033,22 +1470,27 @@ async function postComment(event) {
    AUTH
 ========================================================= */
 
-function openAuth(mode = "signup") {
+function openAuth(
+  mode = "signup"
+) {
   authMode = mode;
 
-  $("#authModal")?.classList.remove(
-    "hidden"
-  );
+  $("#authModal")
+    ?.classList.remove(
+      "hidden"
+    );
 
-  $("#tabSignup")?.classList.toggle(
-    "selected",
-    mode === "signup"
-  );
+  $("#tabSignup")
+    ?.classList.toggle(
+      "selected",
+      mode === "signup"
+    );
 
-  $("#tabLogin")?.classList.toggle(
-    "selected",
-    mode === "login"
-  );
+  $("#tabLogin")
+    ?.classList.toggle(
+      "selected",
+      mode === "login"
+    );
 
   if ($("#authTitle")) {
     $("#authTitle").textContent =
@@ -1071,10 +1513,11 @@ function openAuth(mode = "signup") {
         : "Log in";
   }
 
-  $("#avatarLabel")?.classList.toggle(
-    "hidden",
-    mode !== "signup"
-  );
+  $("#avatarLabel")
+    ?.classList.toggle(
+      "hidden",
+      mode !== "signup"
+    );
 
   if ($("#password")) {
     $("#password").autocomplete =
@@ -1084,20 +1527,28 @@ function openAuth(mode = "signup") {
   }
 }
 
-async function submitAuth(event) {
+async function submitAuth(
+  event
+) {
   event.preventDefault();
 
   const username =
-    $("#username")?.value.trim() || "";
+    $("#username")
+      ?.value
+      .trim() || "";
 
   const password =
-    $("#password")?.value || "";
+    $("#password")
+      ?.value || "";
 
   try {
     let data;
 
-    if (authMode === "signup") {
-      const form = new FormData();
+    if (
+      authMode === "signup"
+    ) {
+      const form =
+        new FormData();
 
       form.append(
         "username",
@@ -1110,7 +1561,8 @@ async function submitAuth(event) {
       );
 
       const avatar =
-        $("#avatar")?.files?.[0];
+        $("#avatar")
+          ?.files?.[0];
 
       if (avatar) {
         form.append(
@@ -1131,10 +1583,12 @@ async function submitAuth(event) {
         "/api/login",
         {
           method: "POST",
+
           headers: {
             "Content-Type":
               "application/json"
           },
+
           body: JSON.stringify({
             username,
             password
@@ -1144,18 +1598,19 @@ async function submitAuth(event) {
     }
 
     token = data.token;
+    user = data.user;
 
     localStorage.setItem(
       "perfectube_token",
       token
     );
 
-    user = data.user;
-
     setAccount();
 
     $("#authModal")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
 
     $("#authForm")?.reset();
 
@@ -1176,77 +1631,137 @@ async function submitAuth(event) {
 function renderChannels() {
   if (!$("#channelGrid")) return;
 
-  const channels = [
-    ...new Map(
-      videos.map(v => [
-        v.channelHandle,
-        v
-      ])
-    ).values()
-  ];
+  const map =
+    new Map();
+
+  videos.forEach(video => {
+    const name =
+      getChannelName(video);
+
+    const handle =
+      video.channelHandle ||
+      video.channelId ||
+      video.channel?.id ||
+      "";
+
+    const key =
+      `${name}-${handle}`;
+
+    if (!map.has(key)) {
+      map.set(
+        key,
+        {
+          ...video,
+          channelName: name,
+          channelHandle: handle
+        }
+      );
+    }
+  });
+
+  const channels =
+    [...map.values()];
 
   $("#channelGrid").innerHTML =
-    channels.map(v => `
-      <div class="channelItem">
-        <strong>
-          ${esc(v.channelName)}
-        </strong>
+    channels.map(
+      video => `
+        <div class="channelItem">
 
-        <span>
-          ${esc(v.channelHandle)}
-          ·
-          ${esc(v.sourceType)}
-        </span>
-      </div>
-    `).join("");
+          <strong>
+            ${esc(
+              getChannelName(video)
+            )}
+          </strong>
+
+          <span>
+            ${esc(
+              video.channelHandle ||
+              video.channelId ||
+              ""
+            )}
+            ${
+              video.sourceType
+                ? ` · ${esc(
+                    video.sourceType
+                  )}`
+                : ""
+            }
+          </span>
+
+        </div>
+      `
+    ).join("");
 }
 
 /* =========================================================
    PAGE SWITCHING
 ========================================================= */
 
-function showPage(page) {
+function showPage(
+  page
+) {
   currentPage = page;
 
   $$(".side[data-page]").forEach(
     button => {
       button.classList.toggle(
         "active",
-        button.dataset.page === page
+        button.dataset.page ===
+          page
       );
     }
   );
 
-  if (page === "channels") {
+  if (
+    page === "channels"
+  ) {
     $("#videoGrid")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
 
     $("#hero")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
 
     $("#channelsPanel")
-      ?.classList.remove("hidden");
+      ?.classList.remove(
+        "hidden"
+      );
 
     $("#shortsFeed")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
 
     renderChannels();
 
     return;
   }
 
-  if (page === "shorts") {
+  if (
+    page === "shorts"
+  ) {
     $("#videoGrid")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
 
     $("#hero")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
 
     $("#channelsPanel")
-      ?.classList.add("hidden");
+      ?.classList.add(
+        "hidden"
+      );
 
     $("#shortsFeed")
-      ?.classList.remove("hidden");
+      ?.classList.remove(
+        "hidden"
+      );
 
     if ($("#feedTitle")) {
       $("#feedTitle").textContent =
@@ -1259,16 +1774,24 @@ function showPage(page) {
   }
 
   $("#videoGrid")
-    ?.classList.remove("hidden");
+    ?.classList.remove(
+      "hidden"
+    );
 
   $("#hero")
-    ?.classList.remove("hidden");
+    ?.classList.remove(
+      "hidden"
+    );
 
   $("#channelsPanel")
-    ?.classList.add("hidden");
+    ?.classList.add(
+      "hidden"
+    );
 
   $("#shortsFeed")
-    ?.classList.add("hidden");
+    ?.classList.add(
+      "hidden"
+    );
 
   if ($("#feedTitle")) {
     $("#feedTitle").textContent =
@@ -1283,27 +1806,145 @@ function showPage(page) {
 function prepareShorts() {
   if (!videos.length) {
     shortsVideos = [];
+
     renderShorts();
+
     return;
   }
 
-  shortsVideos = [...videos];
+  shortsVideos =
+    [...videos];
 
   shortsIndex = 0;
-  shortsInitialized = true;
 
   renderShorts();
 }
 
+function createShortHTML(
+  video,
+  index
+) {
+  const title =
+    getVideoTitle(video);
+
+  const channel =
+    getChannelName(video);
+
+  const embed =
+    video.embedUrl ||
+    (
+      `https://www.youtube.com/embed/` +
+      `${encodeURIComponent(video.id)}` +
+      `?rel=0&playsinline=1`
+    );
+
+  return `
+    <article
+      class="shortItem"
+      data-short-index="${index}"
+      data-video-id="${esc(
+        video.id
+      )}"
+    >
+
+      <div class="shortPlayer">
+
+        <iframe
+          src="${esc(embed)}"
+          title="${esc(title)}"
+          loading="lazy"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+
+      </div>
+
+      <div class="shortOverlay">
+
+        <div class="shortInfo">
+
+          <div class="shortChannel">
+
+            <img
+              src="${esc(
+                video.channelAvatar ||
+                defaultAvatar(channel)
+              )}"
+              alt=""
+            >
+
+            <strong>
+              ${esc(channel)}
+            </strong>
+
+          </div>
+
+          <h2>
+            ${esc(title)}
+          </h2>
+
+          <p>
+            ${esc(
+              video.description ||
+              ""
+            )}
+          </p>
+
+        </div>
+
+        <div class="shortActions">
+
+          <button
+            type="button"
+            class="shortAction"
+            data-short-like="${esc(
+              video.id
+            )}"
+          >
+            ❤️
+            <span>Like</span>
+          </button>
+
+          <button
+            type="button"
+            class="shortAction"
+            data-short-comment="${esc(
+              video.id
+            )}"
+          >
+            💬
+            <span>Comments</span>
+          </button>
+
+          <button
+            type="button"
+            class="shortAction"
+            data-short-open="${esc(
+              video.id
+            )}"
+          >
+            ▶
+            <span>Open</span>
+          </button>
+
+        </div>
+
+      </div>
+
+    </article>
+  `;
+}
+
 function renderShorts() {
-  const feed = $("#shortsFeed");
+  const feed =
+    $("#shortsFeed");
 
   if (!feed) return;
 
   if (!shortsVideos.length) {
     feed.innerHTML = `
       <div class="empty">
-        No Shorts available.
+        No videos available.
       </div>
     `;
 
@@ -1311,93 +1952,15 @@ function renderShorts() {
   }
 
   feed.innerHTML =
-    shortsVideos.map(
-      (video, index) => `
-        <article
-          class="shortItem"
-          data-short-index="${index}"
-          data-video-id="${esc(video.id)}"
-        >
-          <div class="shortPlayer">
-            <iframe
-              src="https://www.youtube.com/embed/${encodeURIComponent(
-                video.id
-              )}?rel=0&playsinline=1"
-              title="${esc(video.title)}"
-              loading="lazy"
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowfullscreen
-            ></iframe>
-          </div>
-
-          <div class="shortOverlay">
-            <div class="shortInfo">
-
-              <div class="shortChannel">
-                <img
-                  src="${esc(
-                    video.channelAvatar ||
-                    defaultAvatar(
-                      video.channelName
-                    )
-                  )}"
-                  alt=""
-                >
-
-                <strong>
-                  ${esc(video.channelName)}
-                </strong>
-              </div>
-
-              <h2>
-                ${esc(video.title)}
-              </h2>
-
-              <p>
-                ${esc(
-                  video.description ||
-                  ""
-                )}
-              </p>
-            </div>
-
-            <div class="shortActions">
-
-              <button
-                class="shortAction"
-                data-short-like="${esc(
-                  video.id
-                )}"
-              >
-                ❤️
-                <span>Like</span>
-              </button>
-
-              <button
-                class="shortAction"
-                data-short-comment="${esc(
-                  video.id
-                )}"
-              >
-                💬
-                <span>Comments</span>
-              </button>
-
-              <button
-                class="shortAction"
-                data-short-open="${esc(
-                  video.id
-                )}"
-              >
-                ▶
-                <span>Open</span>
-              </button>
-
-            </div>
-          </div>
-        </article>
-      `
-    ).join("");
+    shortsVideos
+      .map(
+        (video, index) =>
+          createShortHTML(
+            video,
+            index
+          )
+      )
+      .join("");
 
   bindShortsButtons();
   setupShortsObserver();
@@ -1416,7 +1979,8 @@ function bindShortsButtons() {
           event.stopPropagation();
 
           openVideo(
-            button.dataset.shortOpen
+            button.dataset
+              .shortOpen
           );
         }
       );
@@ -1431,7 +1995,8 @@ function bindShortsButtons() {
           event.stopPropagation();
 
           openVideo(
-            button.dataset.shortComment
+            button.dataset
+              .shortComment
           );
         }
       );
@@ -1446,7 +2011,8 @@ function bindShortsButtons() {
           event.stopPropagation();
 
           const id =
-            button.dataset.shortLike;
+            button.dataset
+              .shortLike;
 
           if (!token) {
             openAuth("login");
@@ -1454,20 +2020,31 @@ function bindShortsButtons() {
           }
 
           try {
-            await api("/api/reaction", {
-              method: "POST",
-              headers: {
-                "Content-Type":
-                  "application/json"
-              },
-              body: JSON.stringify({
-                videoId: id,
-                reaction: "like"
-              })
-            });
+            const data =
+              await api(
+                "/api/reaction",
+                {
+                  method:
+                    "POST",
+
+                  headers: {
+                    "Content-Type":
+                      "application/json"
+                  },
+
+                  body:
+                    JSON.stringify({
+                      videoId: id,
+                      value: 1
+                    })
+                }
+              );
 
             button.classList.toggle(
-              "selected"
+              "selected",
+              Number(
+                data.userReaction
+              ) === 1
             );
           } catch (e) {
             toast(e.message);
@@ -1479,39 +2056,49 @@ function bindShortsButtons() {
 }
 
 /* =========================================================
-   SHORTS INTERSECTION OBSERVER
+   SHORTS OBSERVER
 ========================================================= */
 
+let shortsObserver = null;
+
 function setupShortsObserver() {
-  const feed = $("#shortsFeed");
+  const feed =
+    $("#shortsFeed");
 
   if (!feed) return;
+
+  if (shortsObserver) {
+    shortsObserver.disconnect();
+  }
 
   const items =
     $$(".shortItem");
 
   if (!items.length) return;
 
-  const observer =
+  shortsObserver =
     new IntersectionObserver(
       entries => {
-        entries.forEach(entry => {
-          if (
-            !entry.isIntersecting
-          ) {
-            return;
+        entries.forEach(
+          entry => {
+            if (
+              !entry.isIntersecting
+            ) {
+              return;
+            }
+
+            const item =
+              entry.target;
+
+            shortsIndex =
+              Number(
+                item.dataset
+                  .shortIndex
+              );
+
+            maybeLoadMoreShorts();
           }
-
-          const item =
-            entry.target;
-
-          shortsIndex =
-            Number(
-              item.dataset.shortIndex
-            );
-
-          maybeLoadMoreShorts();
-        });
+        );
       },
       {
         root: feed,
@@ -1520,7 +2107,9 @@ function setupShortsObserver() {
     );
 
   items.forEach(item =>
-    observer.observe(item)
+    shortsObserver.observe(
+      item
+    )
   );
 }
 
@@ -1541,137 +2130,83 @@ async function maybeLoadMoreShorts() {
   shortsLoading = true;
 
   try {
-    const data = await api(
-      `/api/videos?type=${encodeURIComponent(
-        currentType
-      )}`
-    );
+    const data =
+      await api(
+        `/api/videos?type=${encodeURIComponent(
+          currentType
+        )}`
+      );
 
     const more =
-      data.videos || [];
+      normalizeVideosResponse(
+        data
+      );
 
     const existing =
       new Set(
-        shortsVideos.map(v => v.id)
+        shortsVideos.map(
+          video => video.id
+        )
       );
 
     const newVideos =
       more.filter(
-        v => !existing.has(v.id)
+        video =>
+          video.id &&
+          !existing.has(
+            video.id
+          )
       );
 
     if (newVideos.length) {
+      const start =
+        shortsVideos.length;
+
       shortsVideos.push(
         ...newVideos
       );
 
-      appendShorts(newVideos);
+      appendShorts(
+        newVideos,
+        start
+      );
     }
-  } catch {
-    /* Keep current feed working. */
+  } catch (e) {
+    console.warn(
+      "Could not load more Shorts:",
+      e.message
+    );
   } finally {
     shortsLoading = false;
   }
 }
 
-function appendShorts(newVideos) {
-  const feed = $("#shortsFeed");
+/* =========================================================
+   APPEND SHORTS
+========================================================= */
+
+function appendShorts(
+  newVideos,
+  startIndex
+) {
+  const feed =
+    $("#shortsFeed");
 
   if (!feed) return;
 
-  const start =
-    shortsVideos.length -
-    newVideos.length;
-
   feed.insertAdjacentHTML(
     "beforeend",
-    newVideos.map(
-      (video, offset) => `
-        <article
-          class="shortItem"
-          data-short-index="${start + offset}"
-          data-video-id="${esc(video.id)}"
-        >
-          <div class="shortPlayer">
-            <iframe
-              src="https://www.youtube.com/embed/${encodeURIComponent(
-                video.id
-              )}?rel=0&playsinline=1"
-              title="${esc(video.title)}"
-              loading="lazy"
-              allow="autoplay; encrypted-media; picture-in-picture"
-              allowfullscreen
-            ></iframe>
-          </div>
 
-          <div class="shortOverlay">
-            <div class="shortInfo">
-
-              <div class="shortChannel">
-                <img
-                  src="${esc(
-                    video.channelAvatar ||
-                    defaultAvatar(
-                      video.channelName
-                    )
-                  )}"
-                  alt=""
-                >
-
-                <strong>
-                  ${esc(video.channelName)}
-                </strong>
-              </div>
-
-              <h2>
-                ${esc(video.title)}
-              </h2>
-
-              <p>
-                ${esc(
-                  video.description ||
-                  ""
-                )}
-              </p>
-            </div>
-
-            <div class="shortActions">
-
-              <button
-                class="shortAction"
-                data-short-like="${esc(
-                  video.id
-                )}"
-              >
-                ❤️
-                <span>Like</span>
-              </button>
-
-              <button
-                class="shortAction"
-                data-short-comment="${esc(
-                  video.id
-                )}"
-              >
-                💬
-                <span>Comments</span>
-              </button>
-
-              <button
-                class="shortAction"
-                data-short-open="${esc(
-                  video.id
-                )}"
-              >
-                ▶
-                <span>Open</span>
-              </button>
-
-            </div>
-          </div>
-        </article>
-      `
-    ).join("")
+    newVideos
+      .map(
+        (video, offset) =>
+          createShortHTML(
+            video,
+            startIndex +
+              offset
+          )
+      )
+      .join("")
   );
 
   bindShortsButtons();
@@ -1679,7 +2214,7 @@ function appendShorts(newVideos) {
 }
 
 /* =========================================================
-   SHORTS KEYBOARD NAVIGATION
+   SHORTS KEYBOARD
 ========================================================= */
 
 function setupShortcuts() {
@@ -1687,21 +2222,23 @@ function setupShortcuts() {
     "keydown",
     event => {
       if (
-        currentPage !== "shorts"
+        currentPage !==
+        "shorts"
       ) {
         return;
       }
 
       if (
         event.target.matches(
-          "input, textarea"
+          "input, textarea, select"
         )
       ) {
         return;
       }
 
       if (
-        event.key === "ArrowDown"
+        event.key ===
+        "ArrowDown"
       ) {
         event.preventDefault();
 
@@ -1709,7 +2246,8 @@ function setupShortcuts() {
       }
 
       if (
-        event.key === "ArrowUp"
+        event.key ===
+        "ArrowUp"
       ) {
         event.preventDefault();
 
@@ -1717,7 +2255,8 @@ function setupShortcuts() {
       }
 
       if (
-        event.key === "PageDown"
+        event.key ===
+        "PageDown"
       ) {
         event.preventDefault();
 
@@ -1725,7 +2264,8 @@ function setupShortcuts() {
       }
 
       if (
-        event.key === "PageUp"
+        event.key ===
+        "PageUp"
       ) {
         event.preventDefault();
 
@@ -1739,8 +2279,11 @@ function setupShortcuts() {
    SHORTS SCROLL
 ========================================================= */
 
-function scrollShorts(direction) {
-  const feed = $("#shortsFeed");
+function scrollShorts(
+  direction
+) {
+  const feed =
+    $("#shortsFeed");
 
   if (!feed) return;
 
@@ -1750,17 +2293,20 @@ function scrollShorts(direction) {
   if (!items.length) return;
 
   let index =
-    shortsIndex + direction;
+    shortsIndex +
+    direction;
 
-  index = Math.max(
-    0,
-    Math.min(
-      items.length - 1,
-      index
-    )
-  );
+  index =
+    Math.max(
+      0,
+      Math.min(
+        items.length - 1,
+        index
+      )
+    );
 
-  shortsIndex = index;
+  shortsIndex =
+    index;
 
   items[index].scrollIntoView({
     behavior: "smooth",
@@ -1784,7 +2330,8 @@ function setupShortsWheel() {
     "wheel",
     event => {
       if (
-        currentPage !== "shorts"
+        currentPage !==
+        "shorts"
       ) {
         return;
       }
@@ -1803,7 +2350,9 @@ function setupShortsWheel() {
       }
 
       if (
-        Math.abs(event.deltaY) < 8
+        Math.abs(
+          event.deltaY
+        ) < 8
       ) {
         return;
       }
@@ -1827,7 +2376,8 @@ function setupShortsWheel() {
 ========================================================= */
 
 function setupEmojis() {
-  const grid = $("#emojiGrid");
+  const grid =
+    $("#emojiGrid");
 
   if (!grid) return;
 
@@ -1850,7 +2400,8 @@ function setupEmojis() {
         "click",
         async () => {
           const emoji =
-            button.dataset.emoji;
+            button.dataset
+              .emoji;
 
           const commentInput =
             $("#commentText");
@@ -1858,9 +2409,11 @@ function setupEmojis() {
           if (
             commentInput &&
             $("#videoModal") &&
-            !$("#videoModal").classList.contains(
-              "hidden"
-            )
+            !$("#videoModal")
+              .classList
+              .contains(
+                "hidden"
+              )
           ) {
             insertMainCommentEmoji(
               emoji
@@ -1875,9 +2428,11 @@ function setupEmojis() {
           }
 
           try {
-            await navigator.clipboard.writeText(
-              emoji
-            );
+            await navigator
+              .clipboard
+              .writeText(
+                emoji
+              );
 
             toast(
               `${emoji} copied!`
@@ -1912,7 +2467,8 @@ $$(".filter").forEach(
         );
 
         currentType =
-          button.dataset.type;
+          button.dataset.type ||
+          "All";
 
         showPage("home");
 
@@ -1946,14 +2502,17 @@ $$(".side[data-page]").forEach(
 $("#search")?.addEventListener(
   "input",
   () => {
-    clearTimeout(searchTimer);
-
-    searchTimer = setTimeout(
-      () => {
-        renderVideos();
-      },
-      100
+    clearTimeout(
+      searchTimer
     );
+
+    searchTimer =
+      setTimeout(
+        () => {
+          renderVideos();
+        },
+        100
+      );
   }
 );
 
@@ -1972,12 +2531,15 @@ $("#refreshBtn")?.addEventListener(
     await loadVideos();
 
     if (
-      currentPage === "shorts"
+      currentPage ===
+      "shorts"
     ) {
       prepareShorts();
     }
 
-    toast("Videos refreshed.");
+    toast(
+      "Videos refreshed."
+    );
   }
 );
 
@@ -1998,27 +2560,32 @@ $("#homeBtn")?.addEventListener(
 
 $("#loginOpen")?.addEventListener(
   "click",
-  () => openAuth("login")
+  () =>
+    openAuth("login")
 );
 
 $("#signupOpen")?.addEventListener(
   "click",
-  () => openAuth("signup")
+  () =>
+    openAuth("signup")
 );
 
 $("#heroSignup")?.addEventListener(
   "click",
-  () => openAuth("signup")
+  () =>
+    openAuth("signup")
 );
 
 $("#tabLogin")?.addEventListener(
   "click",
-  () => openAuth("login")
+  () =>
+    openAuth("login")
 );
 
 $("#tabSignup")?.addEventListener(
   "click",
-  () => openAuth("signup")
+  () =>
+    openAuth("signup")
 );
 
 $("#authForm")?.addEventListener(
@@ -2052,12 +2619,14 @@ $("#logoutBtn")?.addEventListener(
 
 $("#likeBtn")?.addEventListener(
   "click",
-  () => react("like")
+  () =>
+    react("like")
 );
 
 $("#dislikeBtn")?.addEventListener(
   "click",
-  () => react("dislike")
+  () =>
+    react("dislike")
 );
 
 /* =========================================================
@@ -2084,6 +2653,26 @@ $("#emojiOpen")?.addEventListener(
 );
 
 /* =========================================================
+   SHORTS PREVIOUS / NEXT BUTTONS
+========================================================= */
+
+$("#shortPrev")?.addEventListener(
+  "click",
+  event => {
+    event.preventDefault();
+    scrollShorts(-1);
+  }
+);
+
+$("#shortNext")?.addEventListener(
+  "click",
+  event => {
+    event.preventDefault();
+    scrollShorts(1);
+  }
+);
+
+/* =========================================================
    MODAL CLOSE
 ========================================================= */
 
@@ -2093,8 +2682,11 @@ $$("[data-close]").forEach(
       "click",
       () => {
         const modal =
-          $("#" +
-            button.dataset.close);
+          $(
+            "#" +
+            button.dataset
+              .close
+          );
 
         if (!modal) return;
 
@@ -2107,10 +2699,12 @@ $$("[data-close]").forEach(
           "videoModal"
         ) {
           if ($("#player")) {
-            $("#player").src = "";
+            $("#player").src =
+              "";
           }
 
-          currentVideo = null;
+          currentVideo =
+            null;
         }
       }
     );
@@ -2126,7 +2720,8 @@ $$("[data-close]").forEach(
   "videoModal",
   "emojiModal"
 ].forEach(id => {
-  const modal = $("#" + id);
+  const modal =
+    $("#" + id);
 
   if (!modal) return;
 
@@ -2134,20 +2729,24 @@ $$("[data-close]").forEach(
     "click",
     event => {
       if (
-        event.target.id === id
+        event.target.id ===
+        id
       ) {
         modal.classList.add(
           "hidden"
         );
 
         if (
-          id === "videoModal"
+          id ===
+          "videoModal"
         ) {
           if ($("#player")) {
-            $("#player").src = "";
+            $("#player").src =
+              "";
           }
 
-          currentVideo = null;
+          currentVideo =
+            null;
         }
       }
     }
@@ -2161,26 +2760,32 @@ $$("[data-close]").forEach(
 document.addEventListener(
   "keydown",
   event => {
-    if (event.key !== "Escape") {
+    if (
+      event.key !==
+      "Escape"
+    ) {
       return;
     }
 
-    $$(".modal:not(.hidden)").forEach(
-      modal => {
-        modal.classList.add(
-          "hidden"
-        );
-      }
-    );
+    $$(".modal:not(.hidden)")
+      .forEach(
+        modal => {
+          modal.classList.add(
+            "hidden"
+          );
+        }
+      );
 
     if ($("#player")) {
       $("#player").src = "";
     }
+
+    currentVideo = null;
   }
 );
 
 /* =========================================================
-   CLOSE COMMENT EMOJI PICKERS WHEN CLICKING OUTSIDE
+   CLOSE COMMENT EMOJI PICKERS
 ========================================================= */
 
 document.addEventListener(
@@ -2192,18 +2797,30 @@ document.addEventListener(
       ) ||
       event.target.closest(
         ".commentEmojiPicker"
+      ) ||
+      event.target.closest(
+        "#commentEmojiOpen"
+      ) ||
+      event.target.closest(
+        "#commentEmojiPicker"
       )
     ) {
       return;
     }
 
-    $$(".commentEmojiPicker").forEach(
-      picker => {
-        picker.classList.add(
-          "hidden"
-        );
-      }
-    );
+    $$(".commentEmojiPicker")
+      .forEach(
+        picker => {
+          picker.classList.add(
+            "hidden"
+          );
+        }
+      );
+
+    $("#commentEmojiPicker")
+      ?.classList.add(
+        "hidden"
+      );
   }
 );
 
