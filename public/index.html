@@ -3,133 +3,661 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
   <title>Perfectube</title>
-  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ff0033'/%3E%3Cpath d='M26 19l23 13-23 13z' fill='white'/%3E%3C/svg%3E">
+
+  <link
+    rel="icon"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='16' fill='%23ff0033'/%3E%3Cpath d='M26 19l23 13-23 13z' fill='white'/%3E%3C/svg%3E"
+  >
+
   <link rel="stylesheet" href="/style.css">
 </head>
+
 <body>
+
+  <!-- =====================================================
+       TOAST
+  ====================================================== -->
+
   <div id="toast"></div>
 
+
+  <!-- =====================================================
+       TOP BAR
+  ====================================================== -->
+
   <header class="topbar">
-    <button class="brand" id="homeBtn"><span class="brandIcon">▶</span><span>Perfectube</span></button>
+
+    <button class="brand" id="homeBtn">
+      <span class="brandIcon">▶</span>
+      <span>Perfectube</span>
+    </button>
+
     <div class="searchWrap">
-      <input id="search" placeholder="Search Perfectube..." autocomplete="off">
-      <button id="searchBtn">⌕</button>
+      <input
+        id="search"
+        placeholder="Search Perfectube..."
+        autocomplete="off"
+      >
+
+      <button id="searchBtn">
+        ⌕
+      </button>
     </div>
+
     <div class="accountArea">
-      <button id="loginOpen" class="ghostBtn">Log in</button>
-      <button id="signupOpen" class="primaryBtn">Sign up</button>
-      <div id="account" class="account hidden">
-        <img id="accountAvatar" alt="">
+
+      <button
+        id="loginOpen"
+        class="ghostBtn"
+      >
+        Log in
+      </button>
+
+      <button
+        id="signupOpen"
+        class="primaryBtn"
+      >
+        Sign up
+      </button>
+
+      <div
+        id="account"
+        class="account hidden"
+      >
+
+        <img
+          id="accountAvatar"
+          alt=""
+        >
+
         <span id="accountName"></span>
-        <button id="logoutBtn" class="ghostBtn">Log out</button>
+
+        <button
+          id="logoutBtn"
+          class="ghostBtn"
+        >
+          Log out
+        </button>
+
       </div>
+
     </div>
+
   </header>
 
+
+  <!-- =====================================================
+       MAIN LAYOUT
+  ====================================================== -->
+
   <div class="layout">
+
+
+    <!-- ===================================================
+         SIDEBAR
+    ==================================================== -->
+
     <aside class="sidebar">
-      <button class="side active" data-page="home">⌂ <span>Home</span></button>
-      <button class="side" data-page="shorts">▣ <span>Shorts</span></button>
-      <button class="side" data-page="channels">◉ <span>Channels</span></button>
-      <div class="sideTitle">FILTERS</div>
-      <button class="side filter active" data-type="All">All videos</button>
-      <button class="side filter" data-type="Comedy & Clips">Comedy & Clips</button>
-      <button class="side filter" data-type="Animals">Animals</button>
-      <button class="side filter" data-type="Gaming">Gaming</button>
-      <button class="side filter" data-type="Clips">Clips</button>
-      <div class="sideTitle">YOUR SPACE</div>
-      <button class="side" id="emojiOpen">☺ My emojis</button>
+
+      <button
+        class="side active"
+        data-page="home"
+      >
+        ⌂
+        <span>Home</span>
+      </button>
+
+      <button
+        class="side"
+        data-page="shorts"
+      >
+        ▣
+        <span>Shorts</span>
+      </button>
+
+      <button
+        class="side"
+        data-page="channels"
+      >
+        ◉
+        <span>Channels</span>
+      </button>
+
+
+      <div class="sideTitle">
+        FILTERS
+      </div>
+
+      <button
+        class="side filter active"
+        data-type="All"
+      >
+        All videos
+      </button>
+
+      <button
+        class="side filter"
+        data-type="Comedy & Clips"
+      >
+        Comedy & Clips
+      </button>
+
+      <button
+        class="side filter"
+        data-type="Animals"
+      >
+        Animals
+      </button>
+
+      <button
+        class="side filter"
+        data-type="Gaming"
+      >
+        Gaming
+      </button>
+
+      <button
+        class="side filter"
+        data-type="Clips"
+      >
+        Clips
+      </button>
+
+
+      <div class="sideTitle">
+        YOUR SPACE
+      </div>
+
+      <button
+        class="side"
+        id="emojiOpen"
+      >
+        ☺
+        <span>My emojis</span>
+      </button>
+
     </aside>
 
+
+    <!-- ===================================================
+         MAIN CONTENT
+    ==================================================== -->
+
     <main class="main">
-      <section id="hero" class="hero">
+
+
+      <!-- =================================================
+           HERO
+      ================================================== -->
+
+      <section
+        id="hero"
+        class="hero"
+      >
+
         <div>
-          <p class="eyebrow">YOUR PERSONAL VIDEO HUB</p>
-          <h1>Welcome to <span>Perfectube</span>.</h1>
-          <p>One clean feed for the channels you picked, with your own accounts, reactions, comments and custom emojis.</p>
+
+          <p class="eyebrow">
+            YOUR PERSONAL VIDEO HUB
+          </p>
+
+          <h1>
+            Welcome to
+            <span>Perfectube</span>.
+          </h1>
+
+          <p>
+            One clean feed for the channels you picked,
+            with your own accounts, reactions, comments
+            and custom emojis.
+          </p>
+
         </div>
-        <button class="primaryBtn big" id="heroSignup">Create your account</button>
+
+        <button
+          class="primaryBtn big"
+          id="heroSignup"
+        >
+          Create your account
+        </button>
+
       </section>
+
+
+      <!-- =================================================
+           FEED HEADER
+      ================================================== -->
 
       <div class="sectionHead">
+
         <div>
-          <h2 id="feedTitle">Latest videos</h2>
-          <p id="feedSub">Fresh uploads from your selected channels.</p>
+
+          <h2 id="feedTitle">
+            Latest videos
+          </h2>
+
+          <p id="feedSub">
+            Fresh uploads from your selected channels.
+          </p>
+
         </div>
-        <button id="refreshBtn" class="ghostBtn">↻ Refresh</button>
+
+        <button
+          id="refreshBtn"
+          class="ghostBtn"
+        >
+          ↻ Refresh
+        </button>
+
       </div>
 
-      <div id="loading" class="loading">Loading videos...</div>
-      <div id="videoGrid" class="videoGrid"></div>
-      <div id="empty" class="empty hidden">No videos match that filter.</div>
 
-      <section id="channelsPanel" class="channelsPanel hidden">
-        <div class="sectionHead"><div><h2>Your channels</h2><p>The channels currently included in Perfectube.</p></div></div>
-        <div id="channelGrid" class="channelGrid"></div>
+      <!-- =================================================
+           NORMAL VIDEO FEED
+      ================================================== -->
+
+      <div
+        id="loading"
+        class="loading"
+      >
+        Loading videos...
+      </div>
+
+      <div
+        id="videoGrid"
+        class="videoGrid"
+      ></div>
+
+      <div
+        id="empty"
+        class="empty hidden"
+      >
+        No videos match that filter.
+      </div>
+
+
+      <!-- =================================================
+           SHORTS / INFINITE FEED
+      ================================================== -->
+
+      <section
+        id="shortsFeed"
+        class="shortsFeed hidden"
+      ></section>
+
+
+      <!-- =================================================
+           CHANNELS
+      ================================================== -->
+
+      <section
+        id="channelsPanel"
+        class="channelsPanel hidden"
+      >
+
+        <div class="sectionHead">
+
+          <div>
+
+            <h2>
+              Your channels
+            </h2>
+
+            <p>
+              The channels currently included in Perfectube.
+            </p>
+
+          </div>
+
+        </div>
+
+        <div
+          id="channelGrid"
+          class="channelGrid"
+        ></div>
+
       </section>
+
     </main>
+
   </div>
 
-  <!-- Auth modal -->
-  <div id="authModal" class="modal hidden">
+
+  <!-- =====================================================
+       AUTH MODAL
+  ====================================================== -->
+
+  <div
+    id="authModal"
+    class="modal hidden"
+  >
+
     <div class="modalCard authCard">
-      <button class="close" data-close="authModal">×</button>
-      <div class="authLogo">▶</div>
-      <h2 id="authTitle">Create your Perfectube account</h2>
-      <p id="authSubtitle">Pick a name, password and profile picture.</p>
+
+      <button
+        class="close"
+        data-close="authModal"
+      >
+        ×
+      </button>
+
+      <div class="authLogo">
+        ▶
+      </div>
+
+      <h2 id="authTitle">
+        Create your Perfectube account
+      </h2>
+
+      <p id="authSubtitle">
+        Pick a name, password and profile picture.
+      </p>
+
 
       <div class="authTabs">
-        <button id="tabLogin">Log in</button>
-        <button id="tabSignup" class="selected">Sign up</button>
+
+        <button id="tabLogin">
+          Log in
+        </button>
+
+        <button
+          id="tabSignup"
+          class="selected"
+        >
+          Sign up
+        </button>
+
       </div>
+
 
       <form id="authForm">
-        <label>Name<input id="username" required maxlength="24" autocomplete="username" placeholder="YourName"></label>
-        <label>Password<input id="password" required minlength="6" type="password" autocomplete="new-password" placeholder="At least 6 characters"></label>
-        <label id="avatarLabel">Profile picture<input id="avatar" type="file" accept="image/png,image/jpeg,image/webp,image/gif"></label>
-        <button class="primaryBtn full" type="submit" id="authSubmit">Sign up</button>
+
+        <label>
+          Name
+
+          <input
+            id="username"
+            required
+            maxlength="24"
+            autocomplete="username"
+            placeholder="YourName"
+          >
+        </label>
+
+
+        <label>
+          Password
+
+          <input
+            id="password"
+            required
+            minlength="6"
+            type="password"
+            autocomplete="new-password"
+            placeholder="At least 6 characters"
+          >
+        </label>
+
+
+        <label id="avatarLabel">
+
+          Profile picture
+
+          <input
+            id="avatar"
+            type="file"
+            accept="image/png,image/jpeg,image/webp,image/gif"
+          >
+
+        </label>
+
+
+        <button
+          class="primaryBtn full"
+          type="submit"
+          id="authSubmit"
+        >
+          Sign up
+        </button>
+
       </form>
-      <p class="smallNote">No email is required for this Perfectube account system.</p>
+
+
+      <p class="smallNote">
+        No email is required for this Perfectube account system.
+      </p>
+
     </div>
+
   </div>
 
-  <!-- Video modal -->
-  <div id="videoModal" class="modal hidden">
+
+  <!-- =====================================================
+       VIDEO MODAL
+  ====================================================== -->
+
+  <div
+    id="videoModal"
+    class="modal hidden"
+  >
+
     <div class="modalCard videoCard">
-      <button class="close" data-close="videoModal">×</button>
-      <div class="player"><iframe id="player" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe></div>
+
+      <button
+        class="close"
+        data-close="videoModal"
+      >
+        ×
+      </button>
+
+
+      <!-- PLAYER -->
+
+      <div class="player">
+
+        <iframe
+          id="player"
+          allow="autoplay; encrypted-media; picture-in-picture"
+          allowfullscreen
+        ></iframe>
+
+      </div>
+
+
+      <!-- VIDEO INFORMATION -->
+
       <div class="videoInfo">
+
         <h2 id="videoTitle"></h2>
+
         <p id="videoChannel"></p>
+
+
         <div class="reactionRow">
-          <button id="likeBtn">👍 <span id="likeCount">0</span></button>
-          <button id="dislikeBtn">👎 <span id="dislikeCount">0</span></button>
-          <a id="youtubeBtn" target="_blank" rel="noopener">Open on YouTube ↗</a>
+
+          <button id="likeBtn">
+            👍
+            <span id="likeCount">
+              0
+            </span>
+          </button>
+
+          <button id="dislikeBtn">
+            👎
+            <span id="dislikeCount">
+              0
+            </span>
+          </button>
+
+          <a
+            id="youtubeBtn"
+            target="_blank"
+            rel="noopener"
+          >
+            Open on YouTube ↗
+          </a>
+
         </div>
+
       </div>
+
+
+      <!-- =================================================
+           COMMENTS
+      ================================================== -->
+
       <div class="comments">
-        <div class="commentHead"><h3>Comments</h3><span id="commentCount">0</span></div>
-        <form id="commentForm">
-          <input id="commentText" maxlength="500" placeholder="Write a comment...">
-          <button class="primaryBtn" type="submit">Post</button>
+
+        <div class="commentHead">
+
+          <h3>
+            Comments
+          </h3>
+
+          <span id="commentCount">
+            0
+          </span>
+
+        </div>
+
+
+        <!-- MAIN COMMENT COMPOSER -->
+
+        <form
+          id="commentForm"
+          class="commentForm"
+        >
+
+          <div class="commentInputWrap">
+
+            <input
+              id="commentText"
+              maxlength="500"
+              placeholder="Write a comment..."
+              autocomplete="off"
+            >
+
+            <button
+              type="button"
+              id="commentEmojiOpen"
+              class="emojiInputBtn"
+              title="Add emoji"
+            >
+              😀
+            </button>
+
+          </div>
+
+
+          <button
+            class="primaryBtn"
+            type="submit"
+          >
+            Post
+          </button>
+
         </form>
-        <div id="commentList"></div>
+
+
+        <!-- MAIN COMMENT EMOJI PICKER -->
+
+        <div
+          id="commentEmojiPicker"
+          class="commentEmojiPicker mainCommentEmojiPicker hidden"
+        ></div>
+
+
+        <!-- COMMENT LIST -->
+
+        <div
+          id="commentList"
+          class="commentList"
+        ></div>
+
       </div>
+
     </div>
+
   </div>
 
-  <!-- Emoji modal -->
-  <div id="emojiModal" class="modal hidden">
+
+  <!-- =====================================================
+       EMOJI MODAL
+  ====================================================== -->
+
+  <div
+    id="emojiModal"
+    class="modal hidden"
+  >
+
     <div class="modalCard emojiCard">
-      <button class="close" data-close="emojiModal">×</button>
-      <h2>Perfectube emojis</h2>
-      <p>These are Perfectube's built-in custom reaction emojis.</p>
-      <div id="emojiGrid" class="emojiGrid"></div>
-      <div class="emojiHint">Click an emoji to copy it.</div>
+
+      <button
+        class="close"
+        data-close="emojiModal"
+      >
+        ×
+      </button>
+
+
+      <h2>
+        Perfectube emojis
+      </h2>
+
+      <p>
+        Use these emojis anywhere on Perfectube.
+      </p>
+
+
+      <div
+        id="emojiGrid"
+        class="emojiGrid"
+      ></div>
+
+
+      <div class="emojiHint">
+        Click an emoji to insert it into your comment
+        or copy it.
+      </div>
+
     </div>
+
   </div>
+
+
+  <!-- =====================================================
+       SHORTS NAVIGATION BUTTONS
+  ====================================================== -->
+
+  <div
+    id="shortsControls"
+    class="shortsControls hidden"
+  >
+
+    <button
+      id="shortPrev"
+      title="Previous Short"
+    >
+      ↑
+    </button>
+
+    <button
+      id="shortNext"
+      title="Next Short"
+    >
+      ↓
+    </button>
+
+  </div>
+
+
+  <!-- =====================================================
+       SCRIPT
+  ====================================================== -->
 
   <script src="/app.js"></script>
+
 </body>
 </html>
