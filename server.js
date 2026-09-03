@@ -51,10 +51,6 @@ let users = null;
 let reactions = null;
 let comments = null;
 
-/* =========================================================
-   DATABASE
-========================================================= */
-
 async function connectDB() {
   if (!MONGODB_URI) {
     throw new Error("MONGODB_URI is not set in the server environment.");
@@ -72,7 +68,6 @@ async function connectDB() {
 
   await mongoClient.connect();
 
-  // Force a real database operation so we know the connection works.
   await mongoClient.db("admin").command({ ping: 1 });
 
   db = mongoClient.db("perfectube");
@@ -108,10 +103,6 @@ function requireDB(res) {
 
   return true;
 }
-
-/* =========================================================
-   AUTH
-========================================================= */
 
 function makeToken(user) {
   return jwt.sign(
@@ -149,10 +140,6 @@ function auth(req, res, next) {
   }
 }
 
-/* =========================================================
-   YOUTUBE API
-========================================================= */
-
 async function youtube(pathname, params = {}) {
   if (!YOUTUBE_API_KEY) {
     throw new Error("YOUTUBE_API_KEY is missing.");
@@ -173,8 +160,7 @@ async function youtube(pathname, params = {}) {
 
   if (!response.ok) {
     throw new Error(
-      data?.error?.message ||
-      "YouTube API request failed."
+      data?.error?.message || "YouTube API request failed."
     );
   }
 
@@ -194,7 +180,7 @@ async function resolveHandle(handle) {
   const item = data.items?.[0];
 
   if (!item) {
-    throw new Error(`Could not find ${handle}`);
+    throw new Error("Could not find " + handle);
   }
 
   resolvedChannels.set(handle, item);
@@ -219,43 +205,29 @@ async function getVideosForChannel(channel) {
     title: item.snippet.title,
     description: item.snippet.description,
     publishedAt: item.snippet.publishedAt,
-
     channelId: real.id,
     channelName: real.snippet.title,
     channelHandle: channel.handle,
-
-    channelAvatar:
-      real.snippet.thumbnails?.default?.url || "",
-
+    channelAvatar: real.snippet.thumbnails?.default?.url || "",
     thumbnail:
-      `https://i.ytimg.com/vi/${item.contentDetails.videoId}/hqdefault.jpg`,
-
+      "https://i.ytimg.com/vi/" +
+      item.contentDetails.videoId +
+      "/hqdefault.jpg",
     url:
-      `https://www.youtube.com/watch?v=${item.contentDetails.videoId}`,
-
+      "https://www.youtube.com/watch?v=" +
+      item.contentDetails.videoId,
     sourceType: channel.type
   }));
 }
-
-/* =========================================================
-   CONFIG
-========================================================= */
 
 app.get("/api/config", (req, res) => {
   res.json({
     name: "Perfectube",
     channels: CHANNELS,
-
-    // This now reports the ACTUAL database connection state.
     online: Boolean(db),
-
     youtubeConfigured: Boolean(YOUTUBE_API_KEY)
   });
 });
-
-/* =========================================================
-   VIDEOS
-========================================================= */
 
 app.get("/api/videos", async (req, res) => {
   try {
@@ -271,10 +243,9 @@ app.get("/api/videos", async (req, res) => {
           return await getVideosForChannel(c);
         } catch (e) {
           console.error(
-            `YouTube error for ${c.handle}:`,
+            "YouTube error for " + c.handle + ":",
             e.message
           );
-
           return [];
         }
       })
@@ -297,10 +268,6 @@ app.get("/api/videos", async (req, res) => {
     });
   }
 });
-
-/* =========================================================
-   CURRENT USER
-========================================================= */
 
 app.get("/api/me", auth, async (req, res) => {
   if (!requireDB(res)) return;
@@ -332,10 +299,6 @@ app.get("/api/me", auth, async (req, res) => {
     });
   }
 });
-
-/* =========================================================
-   SIGN UP
-========================================================= */
 
 app.post(
   "/api/signup",
@@ -373,8 +336,7 @@ app.post(
         })
       ) {
         return res.status(409).json({
-          error:
-            "That name is already taken."
+          error: "That name is already taken."
         });
       }
 
@@ -385,7 +347,9 @@ app.post(
 
       if (req.file) {
         avatar =
-          `data:${req.file.mimetype};base64,` +
+          "data:" +
+          req.file.mimetype +
+          ";base64," +
           req.file.buffer.toString("base64");
       }
 
@@ -404,7 +368,6 @@ app.post(
 
       res.json({
         token: makeToken(user),
-
         user: {
           _id: user._id,
           username: user.username,
@@ -416,22 +379,16 @@ app.post(
 
       if (e?.code === 11000) {
         return res.status(409).json({
-          error:
-            "That name is already taken."
+          error: "That name is already taken."
         });
       }
 
       res.status(500).json({
-        error:
-          "Could not create your account."
+        error: "Could not create your account."
       });
     }
   }
 );
-
-/* =========================================================
-   LOGIN
-========================================================= */
 
 app.post("/api/login", async (req, res) => {
   if (!requireDB(res)) return;
@@ -458,14 +415,12 @@ app.post("/api/login", async (req, res) => {
       ))
     ) {
       return res.status(401).json({
-        error:
-          "Wrong name or password."
+        error: "Wrong name or password."
       });
     }
 
     res.json({
       token: makeToken(user),
-
       user: {
         _id: user._id,
         username: user.username,
@@ -476,15 +431,10 @@ app.post("/api/login", async (req, res) => {
     console.error("Login error:", e);
 
     res.status(500).json({
-      error:
-        "Could not log you in."
+      error: "Could not log you in."
     });
   }
 });
-
-/* =========================================================
-   REACTIONS
-========================================================= */
 
 app.post("/api/reaction", auth, async (req, res) => {
   if (!requireDB(res)) return;
@@ -562,15 +512,13 @@ app.post("/api/reaction", auth, async (req, res) => {
 
     res.json({
       ...result,
-      mine:
-        mine?.reaction || "none"
+      mine: mine?.reaction || "none"
     });
   } catch (e) {
     console.error("Reaction error:", e);
 
     res.status(500).json({
-      error:
-        "Could not save reaction."
+      error: "Could not save reaction."
     });
   }
 });
@@ -581,8 +529,7 @@ app.get(
     if (!requireDB(res)) return;
 
     try {
-      const videoId =
-        req.params.videoId;
+      const videoId = req.params.videoId;
 
       const counts =
         await reactions
@@ -631,8 +578,7 @@ app.get(
             });
 
           if (mine) {
-            result.mine =
-              mine.reaction;
+            result.mine = mine.reaction;
           }
         } catch {}
       }
@@ -645,16 +591,11 @@ app.get(
       );
 
       res.status(500).json({
-        error:
-          "Could not load reactions."
+        error: "Could not load reactions."
       });
     }
   }
 );
-
-/* =========================================================
-   COMMENTS
-========================================================= */
 
 app.get(
   "/api/comments/:videoId",
@@ -689,8 +630,7 @@ app.get(
       );
 
       res.status(500).json({
-        error:
-          "Could not load comments."
+        error: "Could not load comments."
       });
     }
   }
@@ -707,13 +647,11 @@ app.post(
         String(req.body.videoId || "");
 
       const text =
-        String(req.body.text || "")
-          .trim();
+        String(req.body.text || "").trim();
 
       if (!videoId || !text) {
         return res.status(400).json({
-          error:
-            "Comment cannot be empty."
+          error: "Comment cannot be empty."
         });
       }
 
@@ -726,15 +664,12 @@ app.post(
 
       const user =
         await users.findOne({
-          _id: new ObjectId(
-            req.user.id
-          )
+          _id: new ObjectId(req.user.id)
         });
 
       if (!user) {
         return res.status(404).json({
-          error:
-            "User not found."
+          error: "User not found."
         });
       }
 
@@ -752,9 +687,7 @@ app.post(
 
       res.json({
         comment: {
-          id: String(
-            result.insertedId
-          ),
+          id: String(result.insertedId),
           username: doc.username,
           avatar: doc.avatar,
           text: doc.text,
@@ -768,16 +701,11 @@ app.post(
       );
 
       res.status(500).json({
-        error:
-          "Could not post comment."
+        error: "Could not post comment."
       });
     }
   }
 );
-
-/* =========================================================
-   MULTER / GENERAL ERROR HANDLER
-========================================================= */
 
 app.use((err, req, res, next) => {
   console.error("Server error:", err);
@@ -798,14 +726,9 @@ app.use((err, req, res, next) => {
   }
 
   res.status(500).json({
-    error:
-      "An unexpected server error occurred."
+    error: "An unexpected server error occurred."
   });
 });
-
-/* =========================================================
-   FRONTEND FALLBACK
-========================================================= */
 
 app.get("*splat", (req, res) => {
   res.sendFile(
@@ -817,17 +740,13 @@ app.get("*splat", (req, res) => {
   );
 });
 
-/* =========================================================
-   START SERVER
-========================================================= */
-
 async function startServer() {
   try {
     await connectDB();
 
     app.listen(PORT, () => {
       console.log(
-        `Perfectube running on port ${PORT}`
+        "Perfectube running on port " + PORT
       );
       console.log(
         "Database status: CONNECTED"
@@ -835,27 +754,18 @@ async function startServer() {
     });
   } catch (err) {
     console.error(
-      "================================================="
-    );
-
-    console.error(
-      "MongoDB connection failed."
+      "MongoDB connection failed:"
     );
 
     console.error(
       err?.message || err
     );
 
-    console.error(
-      "================================================="
-    );
-
-    // Keep the website online so the public frontend
-    // can still load, but database features will return
-    // a clear temporary-unavailable response.
     app.listen(PORT, () => {
       console.log(
-        `Perfectube running on port ${PORT} without database`
+        "Perfectube running on port " +
+        PORT +
+        " without database"
       );
     });
   }
